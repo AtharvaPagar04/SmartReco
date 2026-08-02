@@ -1,0 +1,31 @@
+from datetime import datetime, timezone
+from uuid import uuid4
+
+import pytest
+from sqlalchemy import select
+
+from app.models import ActivityEvent
+from tests.conftest import csrf
+
+
+@pytest.mark.asyncio
+async def test_account_activity_is_summarized(client, db_session, regular_user, course):
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    db_session.add_all([
+        ActivityEvent(event_id=str(uuid4()), user_id=regular_user.id, session_id="session-one", event_type="COURSE_IMPRESSION", course_id=course.id, page_path="/courses", occurred_at=now, received_at=now),
+        ActivityEvent(event_id=str(uuid4()), user_id=regular_user.id, session_id="session-one", event_type="COURSE_VIEW", course_id=course.id, page_path=f"/courses/{course.slug}", occurred_at=now, received_at=now),
+        ActivityEvent(event_id=str(uuid4()), user_id=regular_user.id, session_id="session-one", event_type="DWELL", course_id=course.id, duration_ms=600000, page_path=f"/courses/{course.slug}", occurred_at=now, received_at=now),
+        ActivityEvent(event_id=str(uuid4()), user_id=regular_user.id, session_id="session-one", event_type="SEARCH", search_query=" Python ", page_path="/courses", occurred_at=now, received_at=now),
+        ActivityEvent(event_id=str(uuid4()), user_id=regular_user.id, session_id="session-one", event_type="SEARCH", search_query="python", page_path="/courses", occurred_at=now, received_at=now),
+    ])
+    await db_session.commit()
+    client.cookies.clear()
+    login = await client.get("/login")
+    await client.post("/login", data={"email": regular_user.email, "password": "StudentPass123!", "csrf_token": csrf(login.text)})
+    response = await client.get("/account")
+    assert response.status_code == 200
+    assert "Recently viewed courses" in response.text
+    assert course.title in response.text
+    assert "Categories you explored" in response.text
+    assert "COURSE_IMPRESSION" not in response.text
+    assert response.text.count("python") >= 1

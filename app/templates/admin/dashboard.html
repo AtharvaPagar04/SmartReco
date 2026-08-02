@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — SmartReco{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <p class="eyebrow">Operations</p>
+  <h1>Admin dashboard.</h1>
+  <p>Catalog, event, and vector-sync health at a glance.</p>
+</section>
+
+<div class="stats">
+  <div class="stat"><span>Total users</span><strong>{{ counts.users }}</strong></div>
+  <div class="stat"><span>Active courses</span><strong>{{ counts.active_courses }}</strong></div>
+  <div class="stat"><span>Inactive courses</span><strong>{{ counts.inactive_courses }}</strong></div>
+  <div class="stat"><span>Events today</span><strong>{{ counts.events_today }}</strong></div>
+  <div class="stat"><span>Synchronized courses</span><strong>{{ counts.synced }}</strong></div>
+  <div class="stat"><span>Pending vector jobs</span><strong>{{ counts.pending }}</strong></div>
+  <div class="stat"><span>Processing vector jobs</span><strong>{{ counts.processing }}</strong></div>
+  <div class="stat"><span>Failed vector jobs</span><strong>{{ counts.failed }}</strong></div>
+</div>
+
+<div class="admin-links">
+  <a class="panel" href="/admin/courses">
+    <h2>Manage courses →</h2>
+    <p>Create, edit, archive, and inspect vector status.</p>
+  </a>
+  <a class="panel" href="/admin/vector-sync">
+    <h2>Vector sync →</h2>
+    <p>Review pending, failed, and completed operations.</p>
+  </a>
+  <a class="panel" href="/admin/events">
+    <h2>Event diagnostics →</h2>
+    <p>Inspect the behavioral event stream.</p>
+  </a>
+</div>
+{% endblock %}

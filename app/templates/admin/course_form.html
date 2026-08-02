@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if course else 'New' }} course — SmartReco{% endblock %}
+{% block content %}
+<a class="back-link" href="/admin/courses">← Course management</a>
+
+<div class="form-page">
+  <p class="eyebrow">Admin catalog</p>
+  <h1>{{ 'Edit course' if course else 'Create a course' }}</h1>
+
+  {% for error in errors %}
+    <div class="alert error">{{ error }}</div>
+  {% endfor %}
+
+  <form method="post" action="{{ form_action }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="next" value="{{ next or '/admin/courses' }}">
+
+    <div class="form-grid">
+      <label>Title
+        <input name="title" required maxlength="180" value="{{ course.title if course else '' }}" placeholder="Course title">
+      </label>
+
+      <label>Slug
+        <input name="slug" maxlength="200" value="{{ course.slug if (course and course.slug) else '' }}" placeholder="Auto-generated if blank">
+      </label>
+
+      <label>Category
+        <select name="category" required>
+          <option value="">Choose a category</option>
+          {% for category in categories %}
+          <option value="{{ category }}" {% if course and course.category == category %}selected{% endif %}>{{ category }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>Instructor
+        <input name="instructor" required value="{{ course.instructor if course else '' }}" placeholder="Instructor name">
+      </label>
+
+      <label>Difficulty
+        <select name="difficulty">
+          {% for s in ['BEGINNER','INTERMEDIATE','ADVANCED'] %}
+            <option value="{{ s }}" {% if course and course.difficulty == s %}selected{% endif %}>{{ s|title }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>Duration (minutes)
+        <input type="number" name="duration_minutes" min="1" value="{{ course.duration_minutes if course else 60 }}" required>
+      </label>
+
+      <label>Price
+        <input type="number" name="price" min="0" step="0.01" value="{{ course.price if course else '0.00' }}" required>
+      </label>
+
+      <label>Currency
+        <input name="currency" maxlength="3" value="{{ course.currency if course else 'USD' }}" required>
+      </label>
+
+      <label class="wide">Thumbnail URL
+        <input type="url" name="thumbnail_url" value="{{ course.thumbnail_url if (course and course.thumbnail_url and course.thumbnail_url != 'None') else '' }}" placeholder="https://example.com/image.jpg">
+      </label>
+
+      <label class="wide">Tags <small>(comma-separated)</small>
+        <input name="tags" value="{{ course.tags|join(', ') if (course and course.tags) else '' }}" placeholder="e.g. python, backend, security">
+      </label>
+
+      <label class="wide">Short description
+        <textarea name="short_description" maxlength="500" required placeholder="Brief summary of the course...">{{ course.short_description if course else '' }}</textarea>
+      </label>
+
+      <label class="wide">Description
+        <textarea name="description" rows="8" required placeholder="Detailed course description...">{{ course.description if course else '' }}</textarea>
+      </label>
+    </div>
+
+    <div class="check-row">
+      <label>
+        <input type="checkbox" name="is_featured" {% if course and course.is_featured %}checked{% endif %}> Featured course
+      </label>
+      <label>
+        <input type="checkbox" name="is_active" {% if not course or course.is_active %}checked{% endif %}> Active status
+      </label>
+    </div>
+
+    <button class="button" type="submit">{{ 'Save changes' if course else 'Create course' }}</button>
+  </form>
+</div>
+{% endblock %}

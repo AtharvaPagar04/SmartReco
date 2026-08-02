@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Events — SmartReco{% endblock %}
+{% block content %}
+<div class="page-heading"><p class="eyebrow">Admin diagnostics</p><h1>Behavioral events</h1><p>Validated activity only. Phase 1 stores behavior; it does not generate recommendations.</p></div>
+<form class="filters compact" method="get">
+  <label>Type <select name="event_type"><option value="">All types</option>{% for item in ['PAGE_VIEW','COURSE_IMPRESSION','COURSE_VIEW','COURSE_CLICK','SEARCH','FILTER_CHANGE','DWELL','ADMIN_COURSE_CREATED','ADMIN_COURSE_UPDATED','ADMIN_COURSE_DELETED'] %}<option value="{{ item }}" {% if event_type == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></label>
+  <label>User email <input name="user" value="{{ user }}"></label>
+  <label>Course ID <input name="course_id" value="{{ course_id }}"></label>
+  <label>From <input type="date" name="date_from" value="{{ date_from }}"></label>
+  <label>To <input type="date" name="date_to" value="{{ date_to }}"></label>
+  <label>Page size <select name="page_size"><option value="50" {% if page_size == 50 %}selected{% endif %}>50</option><option value="100" {% if page_size == 100 %}selected{% endif %}>100</option></select></label>
+  <button class="button" type="submit">Filter</button>
+</form>
+<p class="muted">{{ total }} matching event{% if total != 1 %}s{% endif %} · Page {{ page }} of {{ pages }}</p>
+<div class="table-wrap"><table><thead><tr><th>Type</th><th>User</th><th>Session</th><th>Course</th><th>Occurred</th><th>Received</th><th>Metadata</th></tr></thead><tbody>
+{% for event, email, title in events %}<tr><td>{{ event.event_type }}<br><small>v{{ event.schema_version }}</small></td><td>{{ email or 'Anonymous' }}</td><td>{{ event.session_id[:8] }}…</td><td>{{ title or '—' }}</td><td>{{ event.occurred_at.strftime('%b %d %H:%M UTC') }}</td><td>{{ event.received_at.strftime('%b %d %H:%M UTC') }}</td><td><details><summary>View metadata</summary><pre>{{ event.metadata_json|tojson(indent=2) }}</pre></details></td></tr>{% else %}<tr><td colspan="7" class="empty-cell">No events match these filters.</td></tr>{% endfor %}
+</tbody></table></div>
+<nav class="pager" aria-label="Event pages">{% if page > 1 %}<a href="{{ request.url.include_query_params(page=page-1) }}">← Previous</a>{% endif %}{% for number in range(1, pages + 1) if pages <= 10 or number in [1, pages, page-1, page, page+1] %}<a class="{% if number == page %}current{% endif %}" href="{{ request.url.include_query_params(page=number) }}">{{ number }}</a>{% endfor %}{% if page < pages %}<a href="{{ request.url.include_query_params(page=page+1) }}">Next →</a>{% endif %}</nav>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Your account — SmartReco{% endblock %}
+{% block content %}
+<section class="page-heading"><p class="eyebrow">Account</p><h1>{{ current_user.full_name }}</h1><p>{{ current_user.email }} · {{ current_user.role|title }}</p></section>
+<div class="stats-grid">
+  <div class="stat-card"><span>Courses viewed</span><strong>{{ activity.weekly.courses_viewed or 0 }}</strong><small>Last 7 days</small></div>
+  <div class="stat-card"><span>Searches made</span><strong>{{ activity.weekly.searches or 0 }}</strong><small>Last 7 days</small></div>
+  <div class="stat-card"><span>Focused learning</span><strong>{{ activity.weekly.dwell_minutes or 0 }} min</strong><small>Qualified dwell, last 7 days</small></div>
+</div>
+<div class="detail-grid">
+  <section class="panel"><h2>Recently viewed courses</h2>{% if activity.recently_viewed_courses %}<div class="activity-list">{% for course in activity.recently_viewed_courses %}<div><strong>{% if course.is_active %}<a href="/courses/{{ course.slug }}">{{ course.title }}</a>{% else %}{{ course.title }}{% endif %}</strong><span>{{ course.category }}{% if course.dwell_minutes %} · {{ course.dwell_minutes }} min focused{% endif %}</span><time>{{ course.last_viewed_at.strftime('%b %d, %Y %H:%M') }}</time></div>{% endfor %}</div>{% else %}<p class="muted">Your course activity will appear here.</p>{% endif %}</section>
+  <section class="panel"><h2>Recent searches</h2>{% if activity.recent_searches %}<div class="tag-row">{% for item in activity.recent_searches %}<span>{{ item.query }}</span>{% endfor %}</div>{% else %}<p class="muted">Searches you make will appear here.</p>{% endif %}<h2 class="subheading">Categories you explored</h2>{% if activity.categories_explored %}<div class="tag-row">{% for item in activity.categories_explored %}<span>{{ item.category }} · {{ item.count }}</span>{% endfor %}</div>{% else %}<p class="muted">Explore a course to build this list.</p>{% endif %}</section>
+</div>
+<p class="muted">Last active: {{ activity.last_active_at.strftime('%b %d, %Y %H:%M UTC') if activity.last_active_at else 'Not yet recorded' }}</p>
+{% endblock %}

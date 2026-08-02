@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Manage courses — SmartReco{% endblock %}
+{% block content %}
+<div class="section-heading">
+  <div>
+    <p class="eyebrow">Admin</p>
+    <h1>Course management</h1>
+  </div>
+  <a class="button" href="/admin/courses/new">+ Add course</a>
+</div>
+
+<form class="filters compact" method="get">
+  <label>Search
+    <input name="q" value="{{ q }}" placeholder="Title or topic...">
+  </label>
+  <label>Status
+    <select name="active">
+      <option value="">All statuses</option>
+      <option value="true" {% if active == 'true' %}selected{% endif %}>Active</option>
+      <option value="false" {% if active == 'false' %}selected{% endif %}>Inactive</option>
+    </select>
+  </label>
+  <label>Sort
+    <select name="sort">
+      <option value="recently_updated" {% if sort == 'recently_updated' %}selected{% endif %}>Recently updated</option>
+      <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Newest</option>
+      <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>Oldest</option>
+      <option value="title" {% if sort == 'title' %}selected{% endif %}>Title</option>
+    </select>
+  </label>
+  <label>Vector
+    <select name="vector_status">
+      <option value="">All vector states</option>
+      {% for s in ['PENDING','SYNCED','FAILED','DELETING','NOT_INDEXED'] %}
+      <option value="{{ s }}" {% if vector_status == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Per page
+    <select name="page_size"><option value="20" {% if page_size == 20 %}selected{% endif %}>20</option><option value="50" {% if page_size == 50 %}selected{% endif %}>50</option><option value="100" {% if page_size == 100 %}selected{% endif %}>100</option></select>
+  </label>
+  <button class="button" type="submit">Filter</button>
+</form>
+<p class="muted">{{ total }} matching course{% if total != 1 %}s{% endif %} · Page {{ page }} of {{ pages }}</p>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Category</th>
+        <th>Difficulty</th>
+        <th>Price</th>
+        <th>Status</th>
+        <th>Vector State</th>
+        <th>Version</th>
+        <th>Last Synced</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for course in courses %}
+      <tr>
+        <td><strong>{{ course.title }}</strong></td>
+        <td>{{ course.category }}</td>
+        <td>{{ course.difficulty|title }}</td>
+        <td>{% if course.price == 0 %}Free{% else %}${{ "%.2f"|format(course.price) }}{% endif %}</td>
+        <td>
+          {% if course.is_active %}
+            <span class="badge success">Active</span>
+          {% else %}
+            <span class="badge muted">Inactive</span>
+          {% endif %}
+        </td>
+        <td><span class="status {{ course.vector_status|lower }}">{{ course.vector_status }}</span></td>
+        <td>v{{ course.version }}</td>
+        <td>{{ course.vector_last_synced_at.strftime('%b %d, %Y %H:%M') if course.vector_last_synced_at else 'Never' }}</td>
+        <td>
+          <div class="actions-cell">
+            <a class="button small secondary" href="/admin/courses/{{ course.id }}/edit?next={{ list_url|urlencode }}">Edit</a>
+            {% if course.is_active %}
+            <form class="inline" method="post" action="/admin/courses/{{ course.id }}/delete">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="next" value="{{ list_url }}">
+              <button class="button small danger" type="submit" onclick="return confirm('Archive this course? It will be deactivated and queued for vector index removal.')">Archive</button>
+            </form>
+            {% else %}
+            <form class="inline" method="post" action="/admin/courses/{{ course.id }}/restore">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="next" value="{{ list_url }}">
+              <button class="button small" type="submit">Restore</button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="9" class="empty-cell">No courses found matching criteria.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<nav class="pager" aria-label="Course pages">
+  {% if page > 1 %}<a href="{{ request.url.include_query_params(page=page-1) }}">← Previous</a>{% endif %}
+  {% for number in range(1, pages + 1) if pages <= 10 or number in [1, pages, page-1, page, page+1] %}<a class="{% if number == page %}current{% endif %}" href="{{ request.url.include_query_params(page=number) }}">{{ number }}</a>{% endfor %}
+  {% if page < pages %}<a href="{{ request.url.include_query_params(page=page+1) }}">Next →</a>{% endif %}
+</nav>
+{% endblock %}
