@@ -78,7 +78,8 @@
     }), { threshold: .55 });
     document.querySelectorAll('.course-card[data-course-id]').forEach(el => observer.observe(el));
   }
-  document.querySelectorAll('[data-filter-form]').forEach(form => form.addEventListener('submit', () => { const data = new FormData(form), query = (data.get('q') || '').trim() || null; add({ event_type: 'FILTER_CHANGE', metadata: { category: data.get('category'), difficulty: data.get('difficulty'), price: data.get('price'), sort: data.get('sort') }, search_query: query }); if (query && query.length > 1) add({ event_type: 'SEARCH', search_query: query, metadata: { source: 'catalog' } }); }));
+  document.querySelectorAll('[data-filter-form]').forEach(form => form.addEventListener('submit', () => { const data = new FormData(form); add({ event_type: 'FILTER_CHANGE', metadata: { category: data.get('category'), difficulty: data.get('difficulty'), price: data.get('price'), sort: data.get('sort') } }); }));
+  document.querySelectorAll('[data-search-form]').forEach(form => form.addEventListener('submit', () => { const query = (new FormData(form).get('q') || '').trim().replace(/\s+/g, ' '); if (query.length > 1) add({ event_type: 'SEARCH', search_query: query, metadata: { source: 'catalog' } }); }));
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { dwell(); flush(true); } });
   window.addEventListener('pagehide', () => { dwell(); flush(true); });
 })();

@@ -5,6 +5,7 @@ from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import ActivityEvent, Course
+from app.search import normalize_search_query
 
 
 @dataclass
@@ -30,6 +31,27 @@ async def recent_for_user(db: AsyncSession, user_id: str, limit: int = 20) -> li
     return list((await db.execute(select(ActivityEvent).where(ActivityEvent.user_id == user_id).order_by(ActivityEvent.occurred_at.desc()).limit(limit))).scalars())
 
 
+async def recent_searches_for_user(db: AsyncSession, user_id: str, limit: int = 6) -> list[dict]:
+    rows = (await db.execute(
+        select(ActivityEvent.search_query, ActivityEvent.occurred_at)
+        .where(ActivityEvent.user_id == user_id, ActivityEvent.event_type == "SEARCH", ActivityEvent.search_query.is_not(None))
+        .order_by(ActivityEvent.occurred_at.desc(), ActivityEvent.id.desc())
+        .limit(max(12, limit * 8))
+    )).all()
+    recent: list[dict] = []
+    seen: set[str] = set()
+    for query, searched_at in rows:
+        normalized = normalize_search_query(query)
+        key = normalized.casefold()
+        if len(normalized) < 2 or key in seen:
+            continue
+        seen.add(key)
+        recent.append({"query": normalized, "searched_at": searched_at.replace(tzinfo=timezone.utc) if searched_at.tzinfo is None else searched_at})
+        if len(recent) >= limit:
+            break
+    return recent
+
+
 async def account_activity(db: AsyncSession, user_id: str) -> AccountActivity:
     meaningful = ("COURSE_VIEW", "COURSE_CLICK", "DWELL")
     dwell_minutes = func.coalesce(func.sum(case((ActivityEvent.event_type == "DWELL", ActivityEvent.duration_ms), else_=0)), 0)
@@ -43,15 +65,7 @@ async def account_activity(db: AsyncSession, user_id: str) -> AccountActivity:
     )).all()
     viewed = [ViewedCourse(title=row[0], slug=row[1], category=row[2], is_active=row[3], last_viewed_at=row[4], dwell_minutes=round((row[5] or 0) / 60000)) for row in viewed_rows]
 
-    normalized = func.lower(func.trim(ActivityEvent.search_query))
-    searches = (await db.execute(
-        select(func.max(ActivityEvent.search_query), func.max(ActivityEvent.occurred_at), normalized)
-        .where(ActivityEvent.user_id == user_id, ActivityEvent.event_type == "SEARCH", ActivityEvent.search_query.is_not(None), func.length(func.trim(ActivityEvent.search_query)) > 0)
-        .group_by(normalized)
-        .order_by(func.max(ActivityEvent.occurred_at).desc())
-        .limit(8)
-    )).all()
-    recent_searches = [{"query": row[0], "occurred_at": row[1]} for row in searches]
+    recent_searches = await recent_searches_for_user(db, user_id, limit=8)
 
     categories = (await db.execute(
         select(Course.category, func.count(func.distinct(Course.id))).select_from(ActivityEvent)

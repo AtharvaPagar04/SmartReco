@@ -65,6 +65,19 @@ Passwords use Argon2 through `pwdlib`. Sessions are signed Starlette cookies wit
 
 `static/js/tracker.js` queues page views, course views, impressions, clicks, filter changes, searches, and dwell events in memory. Every event has a stable UUID `event_id` and `schema_version: 1`; retries reuse the same object. Impressions require 55% visibility for one second and use a 15-minute `sessionStorage` suppression window. Course-detail dwell includes the course UUID, while visibility-aware dwell is capped at 30 minutes and emitted only once. The tracker batches at ten events, flushes every five seconds, caps the queue, uses `fetch(..., keepalive)` and best-effort `sendBeacon` on exit, and never calls Mesh, Qdrant, or recommendation code. The event API validates each event independently, inserts valid events in bulk-like savepoints, and returns accepted, duplicate, and rejected counts. Legacy clients may omit `event_id` during the transition; the server generates one, while the frontend always sends one.
 
+## Search autocomplete and history
+
+The catalog and homepage search fields use `static/js/search-autocomplete.js`. Suggestions are deterministic SQL matches against active course titles, categories, tags, and instructors. The component waits 250 ms, cancels stale requests with `AbortController`, returns at most eight suggestions, and never calls Mesh or Qdrant.
+
+```text
+GET /api/search/suggestions?q=python&limit=8
+GET /api/search/recent
+```
+
+Empty focused inputs show up to six recent searches. Authenticated history is read from the current user’s `SEARCH` activity events; anonymous history is capped and deduplicated in `localStorage` under `smartreco_recent_searches_v1`. Search submission remains the authoritative event boundary: typing and suggestion requests do not create events, while normal submission and selecting an option create one existing-contract `SEARCH` event. Recent history is private and responses use `Cache-Control: private, no-store`; suggestions use `no-store`.
+
+The dropdown follows the ARIA combobox/listbox pattern with `aria-expanded`, `aria-controls`, `aria-activedescendant`, keyboard navigation, Escape/Tab closing, live result announcements, escaped text nodes, and mobile-sized options. No semantic search, personalization, or recommendation logic is involved.
+
 ### Version 1 event contract
 
 Supported event types are `PAGE_VIEW`, `COURSE_IMPRESSION`, `COURSE_VIEW`, `COURSE_CLICK`, `SEARCH`, `FILTER_CHANGE`, and `DWELL`. All browser events require `event_id`, `schema_version`, `event_type`, `page_path`, and `occurred_at`; `course_id` is required for course view/click/impression and for dwell on `/courses/{slug}`; `SEARCH` requires a non-empty normalized `search_query`; `DWELL` requires bounded non-negative `duration_ms`. Metadata is optional and capped. Duplicate `event_id` delivery is successful and counted as a duplicate, not stored twice.
