@@ -1,7 +1,18 @@
 from app.models.activity import ActivityEvent
 from app.models.base import Base
 from app.models.course import Course
+from app.models.enrollment import Enrollment
+from app.models.commerce import CartItem, CourseEntitlement, Order, OrderItem, ShoppingCart
 from app.models.user import User
 from app.models.vector_outbox import VectorOutbox
+from app.models.recommendation import (
+    RecommendationDelivery,
+    RecommendationFeedback,
+    RecommendationItem,
+    RecommendationPreference,
+    RecommendationRun,
+    RecommendationState,
+    UserInterestProfile,
+)
 
-__all__ = ["Base", "User", "Course", "ActivityEvent", "VectorOutbox"]
+__all__ = ["Base", "User", "Course", "Enrollment", "ShoppingCart", "CartItem", "Order", "OrderItem", "CourseEntitlement", "ActivityEvent", "VectorOutbox", "UserInterestProfile", "RecommendationState", "RecommendationRun", "RecommendationItem", "RecommendationFeedback", "RecommendationPreference", "RecommendationDelivery"]

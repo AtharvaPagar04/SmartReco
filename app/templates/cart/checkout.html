@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Checkout — SmartReco{% endblock %}
+{% block content %}
+<section class="page-heading"><p class="eyebrow">Demo checkout</p><h1>Confirm your purchase</h1><p class="lede">This demo mode does not process real money or collect card details.</p></section>
+<section class="panel"><ul>{% for item in order.items %}<li>{{ item.course_title_snapshot }} — {{ item.currency }} {{ '%.2f'|format(item.unit_price_snapshot) }}</li>{% endfor %}</ul><h2>{{ order.currency }} {{ '%.2f'|format(order.total) }}</h2><form method="post" action="/checkout/{{ order.id }}/complete"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button" type="submit">Complete demo purchase</button></form><form method="post" action="/checkout/{{ order.id }}/cancel"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button secondary" type="submit">Cancel</button></form></section>
+{% endblock %}

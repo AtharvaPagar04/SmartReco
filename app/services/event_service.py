@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
 from app.models import ActivityEvent, Course
+from app.services.recommendation_policy_service import mark_user_dirty
 from app.schemas.event import EventInput
 
 
@@ -39,7 +40,7 @@ async def ingest_events(db: AsyncSession, events: list[tuple[int, EventInput]], 
             if not await db.scalar(select(Course.id).where(Course.id == event.course_id)):
                 errors.append({"index": index, "code": "course_not_found"})
                 continue
-        if event.event_type in {"COURSE_IMPRESSION", "COURSE_VIEW", "COURSE_CLICK"} and not event.course_id:
+        if event.event_type in {"COURSE_IMPRESSION", "COURSE_VIEW", "COURSE_CLICK", "RECOMMENDATION_IMPRESSION", "RECOMMENDATION_CLICK"} and not event.course_id:
             errors.append({"index": index, "code": "course_id_required"})
             continue
         if event.event_type == "SEARCH" and not event.normalized_search():
@@ -70,5 +71,7 @@ async def ingest_events(db: AsyncSession, events: list[tuple[int, EventInput]], 
         except IntegrityError:
             duplicates += 1
     if rows:
+        if user_id and any(row.event_type in {"SEARCH", "COURSE_CLICK", "COURSE_VIEW", "DWELL", "FILTER_CHANGE", "RECOMMENDATION_CLICK", "RECOMMENDATION_DISMISS"} for _, row in rows):
+            await mark_user_dirty(db, user_id, occurred_at=max((row.occurred_at for _, row in rows), default=None))
         await db.commit()
     return accepted, duplicates, errors

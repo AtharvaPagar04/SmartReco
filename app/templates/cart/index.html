@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Cart — SmartReco{% endblock %}
+{% block content %}
+<header class="page-header">
+  <p class="eyebrow">Your cart</p>
+  <h1>Ready when you are.</h1>
+</header>
+
+{% if cart.items %}
+<div class="detail-grid">
+  <section class="panel">
+    {% for item in cart.items %}
+    <article class="cart-row" style="display: flex; justify-content: space-between; align-items: center; padding-block: var(--space-4); border-bottom: 1px solid var(--color-border);">
+      <div>
+        <h3 style="margin: 0 0 var(--space-1); font-size: var(--text-lg);">{{ item.course.title if item.course else 'Unavailable course' }}</h3>
+        <p style="margin: 0; color: var(--color-text-secondary); font-size: var(--text-sm);">{{ item.course.category if item.course else 'No longer available' }}</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: var(--space-4);">
+        <strong>{% if item.course and item.course.is_active %}{{ item.course.currency }} {{ '%.2f'|format(item.course.price) }}{% else %}Unavailable{% endif %}</strong>
+        <form method="post" action="/cart/items/{{ item.course.slug if item.course else 'unknown' }}/remove">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="button small danger" type="submit">Remove</button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  </section>
+
+  <aside class="panel">
+    <h2 style="font-size: var(--text-xl); margin-bottom: var(--space-4);">Summary</h2>
+    <p style="color: var(--color-text-secondary); margin-bottom: var(--space-2);">Total <strong>{{ cart.items|length }} item{% if cart.items|length != 1 %}s{% endif %}</strong></p>
+    <p style="font-size: var(--text-3xl); font-weight: 800; color: var(--color-text); margin: 0 0 var(--space-6);">{{ cart.subtotal|round(2) }}</p>
+    <form method="post" action="/checkout">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="button" style="width: 100%;" type="submit">Checkout</button>
+    </form>
+  </aside>
+</div>
+{% else %}
+<div class="empty-state">
+  <h2>Your cart is empty</h2>
+  <p>Browse courses to find your next learning path.</p>
+  <a class="button" href="/courses">Browse courses</a>
+</div>
+{% endif %}
+{% endblock %}

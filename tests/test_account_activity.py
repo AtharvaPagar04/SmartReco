@@ -24,8 +24,29 @@ async def test_account_activity_is_summarized(client, db_session, regular_user, 
     await client.post("/login", data={"email": regular_user.email, "password": "StudentPass123!", "csrf_token": csrf(login.text)})
     response = await client.get("/account")
     assert response.status_code == 200
-    assert "Recently viewed courses" in response.text
-    assert course.title in response.text
+    assert "Recent searches" in response.text
     assert "Categories you explored" in response.text
     assert "COURSE_IMPRESSION" not in response.text
-    assert response.text.count("python") >= 1
+    assert "python" in response.text.lower()
+
+
+@pytest.mark.asyncio
+async def test_api_events_recent_endpoint(client, db_session, regular_user, course):
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    db_session.add(
+        ActivityEvent(event_id=str(uuid4()), user_id=regular_user.id, session_id="session-live", event_type="COURSE_VIEW", course_id=course.id, page_path=f"/courses/{course.slug}", occurred_at=now, received_at=now)
+    )
+    await db_session.commit()
+
+    # Authenticated request to /api/events/recent
+    login = await client.get("/login")
+    await client.post("/login", data={"email": regular_user.email, "password": "StudentPass123!", "csrf_token": csrf(login.text)})
+
+    res = await client.get("/api/events/recent")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["authenticated"] is True
+    assert len(data["recently_viewed"]) >= 1
+    assert data["recently_viewed"][0]["title"] == course.title
+    assert data["recently_viewed"][0]["slug"] == course.slug
+

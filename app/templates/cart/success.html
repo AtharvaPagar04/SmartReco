@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Purchase complete — SmartReco{% endblock %}
+{% block content %}
+<section class="page-heading"><p class="eyebrow">Purchase complete</p><h1>Your courses are ready to start.</h1></section>
+<div class="course-grid">{% for item in order.items %}{% set course = item.course %}{% set action = actions[course.id] %}<article class="course-card"><div class="card-body"><h2>{{ item.course_title_snapshot }}</h2><div class="card-actions">{% include "catalog/_course_action.html" %}</div></div></article>{% endfor %}</div>
+{% endblock %}

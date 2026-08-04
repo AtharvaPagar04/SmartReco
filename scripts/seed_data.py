@@ -48,11 +48,32 @@ SEED_COURSES = [
     {"title": "Responsible AI Product Strategy", "slug": "responsible-ai-product-strategy", "category": "Product Management", "difficulty": "INTERMEDIATE", "tags": ["responsible ai", "product strategy", "risk", "governance"], "short_description": "Make responsible AI trade-offs part of ordinary product strategy.", "description": "Map affected people, define acceptable use, and plan evaluation and escalation before launch. The course gives product teams a practical language for risk without pretending governance is a single checklist.", "instructor": "Amara Williams", "duration_minutes": 150, "price": Decimal("58.00")},
 ]
 
-SEED_FIELDS = VECTOR_FIELDS + ("is_featured",)
+from app.data.course_details import get_course_detail
+
+SEED_FIELDS = VECTOR_FIELDS + ("is_featured", "thumbnail_url", "what_you_will_learn", "prerequisites", "target_audience", "tools_used", "estimated_effort", "curriculum", "final_project", "instructor_bio", "faqs")
 
 
 def _record(definition: dict) -> dict:
-    return {**definition, "currency": "USD", "is_featured": definition["slug"] in {"introduction-to-agentic-ai", "production-rag-systems", "python-for-beginners"}, "is_active": True}
+    slug = definition["slug"]
+    thumbnail_url = f"/static/images/courses/{slug}.png" if slug == "introduction-to-agentic-ai" else f"/static/images/courses/{slug}.svg"
+    details = get_course_detail(
+        definition["slug"],
+        definition["title"],
+        definition["category"],
+        definition["instructor"],
+        definition["description"],
+        definition["short_description"],
+        definition["tags"],
+        definition["duration_minutes"]
+    )
+    return {
+        **definition,
+        **details,
+        "thumbnail_url": thumbnail_url,
+        "currency": "USD",
+        "is_featured": definition["slug"] in {"introduction-to-agentic-ai", "production-rag-systems", "python-for-beginners"},
+        "is_active": True
+    }
 
 
 SEED_COURSES = [_record(item) for item in SEED_COURSES]

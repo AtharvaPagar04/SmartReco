@@ -48,10 +48,10 @@ class VectorStore:
             client.delete(collection_name=settings.qdrant_collection, points_selector=[course_id], wait=True)
         await asyncio.to_thread(_do)
 
-    async def get_point(self, course_id: str):
+    async def get_point(self, course_id: str, *, with_vectors: bool = False):
         def _do():
             client = self._get_client()
-            points = client.retrieve(collection_name=settings.qdrant_collection, ids=[course_id], with_payload=True, with_vectors=False)
+            points = client.retrieve(collection_name=settings.qdrant_collection, ids=[course_id], with_payload=True, with_vectors=with_vectors)
             return points[0] if points else None
         return await asyncio.to_thread(_do)
 
@@ -69,7 +69,15 @@ class VectorStore:
     async def search_courses(self, query_vector: list[float], *, limit: int, filters: dict | None = None) -> list[VectorCourseHit]:
         def _do():
             client = self._get_client()
-            result = client.search(collection_name=settings.qdrant_collection, query_vector=query_vector, limit=limit, query_filter=None)
+            query_filter = None
+            if filters:
+                conditions = []
+                for field, value in filters.items():
+                    if field == "embedding_dimension":
+                        field = "embedding_dimension"
+                    conditions.append(models.FieldCondition(key=field, match=models.MatchValue(value=value)))
+                query_filter = models.Filter(must=conditions)
+            result = client.search(collection_name=settings.qdrant_collection, query_vector=query_vector, limit=limit, query_filter=query_filter)
             return [VectorCourseHit(str(hit.id), hit.score, hit.payload or {}) for hit in result]
         return await asyncio.to_thread(_do)
 

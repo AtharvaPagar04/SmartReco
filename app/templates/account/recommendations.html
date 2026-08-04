@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% block title %}Recommendations — SmartReco{% endblock %}
+{% block content %}
+{% set context = recommendation["context"] if recommendation else {"enrolled": [], "completed": [], "recently_explored": [], "ready_to_start": []} %}
+{% set recommendation_items = recommendation["recommendations"] if recommendation else [] %}
+
+<div class="recommendations-page">
+  <header class="recommendation-hero">
+    <div class="recommendation-hero__content">
+      <p class="section-eyebrow">Your learning path</p>
+      <h1 class="recommendation-hero__title">
+        {% if recommendation %}{{ recommendation["headline"] }}{% else %}Build your learning signals{% endif %}
+      </h1>
+      {% if recommendation %}
+        <p class="recommendation-hero__summary">{{ recommendation["narrative"] }}</p>
+        {% if recommendation["is_fallback"] %}
+          <p class="recommendation-hero__status"><span class="badge">Built from your recent activity</span></p>
+        {% endif %}
+      {% else %}
+        <p class="recommendation-hero__summary">Explore a few courses or search for a topic, and SmartReco will use those signals to tailor this section.</p>
+      {% endif %}
+    </div>
+  </header>
+
+  {% if recommendation and (context["enrolled"] or context["completed"] or context["recently_explored"]) %}
+    <section class="recommendation-section learning-context-panel" aria-labelledby="learning-context-title">
+      <div class="section-heading learning-context-panel__header">
+        <div>
+          <p class="section-eyebrow">Learning context</p>
+          <h2 id="learning-context-title">Your current learning context</h2>
+          <p class="section-description">SmartReco uses these learning signals to shape your next steps.</p>
+        </div>
+      </div>
+
+      <div class="learning-context-grid">
+        {% if context["enrolled"] %}
+          <div class="learning-context-group">
+            <div class="learning-context-group__heading">
+              <span class="context-icon" aria-hidden="true">01</span>
+              <h3>Currently learning</h3>
+            </div>
+            <ul class="context-course-list">
+              {% for course in context["enrolled"] %}
+                <li><a href="/courses/{{ course['slug'] }}">{{ course["title"] }}</a></li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        {% if context["completed"] %}
+          <div class="learning-context-group">
+            <div class="learning-context-group__heading">
+              <span class="context-icon" aria-hidden="true">02</span>
+              <h3>Completed</h3>
+            </div>
+            <ul class="context-course-list">
+              {% for course in context["completed"] %}
+                <li><a href="/courses/{{ course['slug'] }}">{{ course["title"] }}</a></li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        {% if context["recently_explored"] %}
+          <div class="learning-context-group">
+            <div class="learning-context-group__heading">
+              <span class="context-icon" aria-hidden="true">03</span>
+              <h3>Recently explored</h3>
+            </div>
+            <ul class="context-course-list">
+              {% for course in context["recently_explored"] %}
+                <li><a href="/courses/{{ course['slug'] }}">{{ course["title"] }}</a></li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if context["enrolled"] %}
+    <section class="recommendation-section" aria-labelledby="continue-learning-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-eyebrow">Keep your momentum</p>
+          <h2 id="continue-learning-heading">Continue learning</h2>
+          <p class="section-description">Pick up where you left off.</p>
+        </div>
+      </div>
+
+      <div class="continue-learning-grid">
+        {% for course in context["enrolled"] %}
+          <article class="continue-learning-card course-card">
+            <div class="continue-learning-card__content">
+              <p class="eyebrow">{{ course["category"] }}</p>
+              <h3><a href="/courses/{{ course['slug'] }}">{{ course["title"] }}</a></h3>
+              <p class="course-status">In progress</p>
+            </div>
+            <div class="continue-learning-card__actions">
+              <a class="button" href="/courses/{{ course['slug'] }}">Continue course</a>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if context["ready_to_start"] %}
+    <section class="recommendation-section" aria-labelledby="ready-to-start-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-eyebrow">You already have access</p>
+          <h2 id="ready-to-start-heading">Ready to start</h2>
+          <p class="section-description">Courses you own, waiting to be started.</p>
+        </div>
+      </div>
+
+      <div class="continue-learning-grid ready-to-start-grid">
+        {% for course in context["ready_to_start"] %}
+          <article class="continue-learning-card course-card">
+            <div class="continue-learning-card__content">
+              <p class="eyebrow">{{ course["category"] }}</p>
+              <h3><a href="/courses/{{ course['slug'] }}">{{ course["title"] }}</a></h3>
+              <p class="course-status">Purchased and ready</p>
+            </div>
+            <div class="continue-learning-card__actions">
+              <a class="button" href="/courses/{{ course['slug'] }}">Start course</a>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if recommendation and recommendation_items %}
+    <section class="recommendation-section" aria-labelledby="next-steps-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-eyebrow">Personalized recommendations</p>
+          <h2 id="next-steps-heading">Recommended next steps</h2>
+          <p class="section-description">Courses chosen to add a useful next skill.</p>
+        </div>
+      </div>
+
+      <div class="recommendation-grid">
+        {% for item in recommendation_items %}
+          {% if item["state"] == "REPLACEMENT_PENDING" %}
+            <article class="recommendation-card replacement-pending-card" data-replacement-pending data-recommendation-rank="{{ item['rank'] }}">
+              <div class="feedback-replacement-status" role="status" aria-live="polite">
+                <p class="section-eyebrow">Feedback saved</p>
+                <h3>Finding a better match</h3>
+                <p>{{ item["message"] }}</p>
+                <a class="button secondary" href="/recommendations">Refresh suggestions</a>
+              </div>
+            </article>
+          {% elif item["state"] == "REPLACEMENT_FAILED" %}
+            <article class="recommendation-card replacement-failed-card" data-recommendation-rank="{{ item['rank'] }}">
+              <div class="feedback-replacement-status" role="status" aria-live="polite">
+                <p class="section-eyebrow">Replacement status</p>
+                <h3>Finding a better match</h3>
+                <p>{{ item["message"] }}</p>
+                <a class="button secondary" href="/recommendations">Refresh suggestions</a>
+              </div>
+            </article>
+          {% elif item["state"] == "UNAVAILABLE" %}
+            <article class="recommendation-card replacement-unavailable-card" data-recommendation-rank="{{ item['rank'] }}">
+              <div class="feedback-replacement-status">
+                <p class="section-eyebrow">Catalog status</p>
+                <h3>You’re caught up for now</h3>
+                <p>{{ item["message"] }}</p>
+                <a class="button secondary" href="/courses">Browse courses</a>
+              </div>
+            </article>
+          {% else %}
+          {% set course = item["course"] %}
+          {% set action = item["action"] %}
+          <article
+            class="recommendation-card"
+            data-feedback-card
+            data-recommendation-card
+            data-recommendation-item
+            data-recommendation-run-id="{{ recommendation['run_id'] }}"
+            data-recommendation-item-id="{{ item['item_id'] }}"
+            data-recommendation-rank="{{ item['rank'] }}"
+            data-course-id="{{ course['id'] }}"
+          >
+            <div class="recommendation-card__content">
+            <header class="recommendation-card__header">
+              <p class="course-category">{{ course["category"] }}</p>
+              <h3>
+                <a href="/courses/{{ course['slug'] }}" data-recommendation-click data-course-id="{{ course['id'] }}">
+                  {{ course["title"] }}
+                </a>
+              </h3>
+              <p class="skill-connection">{{ item["skill_connection"] }}</p>
+            </header>
+
+            <div class="recommendation-card__body">
+              <section class="recommendation-explanation" aria-labelledby="why-{{ item['item_id'] }}">
+                <h4 id="why-{{ item['item_id'] }}">Why this fits your path</h4>
+                <p>{{ item["reason"] }}</p>
+              </section>
+
+              <section class="recommendation-benefit" aria-labelledby="help-{{ item['item_id'] }}">
+                <h4 id="help-{{ item['item_id'] }}">How this helps</h4>
+                <p>{{ item["how_it_helps"] }}</p>
+              </section>
+
+              {% if item["evidence_labels"] %}
+                <div class="recommendation-evidence" aria-label="Recommendation basis">
+                  <p class="recommendation-evidence__label">Based on</p>
+                  <div class="recommendation-evidence__chips">
+                    {% for label in item["evidence_labels"] %}
+                      <span class="evidence-chip">{{ label }}</span>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+
+            <footer class="recommendation-card__footer">
+              <p class="course-meta">{{ course["difficulty"]|title }} · {% if course["price"]|float == 0 %}Free{% else %}{{ course["currency"] }} {{ course["price"] }}{% endif %}</p>
+              <div class="course-action-stack">
+                {% include "catalog/_course_action.html" %}
+              </div>
+              <button class="dismiss-recommendation-button" type="button" data-feedback-open aria-expanded="false" aria-controls="feedback-overlay-{{ item['item_id'] }}">Not for me</button>
+              <noscript>
+                <form method="post" action="/api/recommendations/items/{{ item['item_id'] }}/dismiss">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button class="dismiss-recommendation-button" type="submit">Not for me</button>
+                </form>
+              </noscript>
+            </footer>
+            </div>
+            <div
+              class="recommendation-feedback-overlay"
+              id="feedback-overlay-{{ item['item_id'] }}"
+              role="dialog"
+              aria-modal="false"
+              aria-labelledby="feedback-title-{{ item['item_id'] }}"
+              aria-describedby="feedback-description-{{ item['item_id'] }}"
+              data-feedback-overlay
+              hidden
+            >
+              <div class="feedback-overlay__header">
+                <div>
+                  <p class="section-eyebrow">Improve your suggestions</p>
+                  <h4 id="feedback-title-{{ item['item_id'] }}">Why doesn’t this course fit?</h4>
+                </div>
+                <button type="button" class="feedback-overlay__close" data-feedback-cancel aria-label="Close feedback form">×</button>
+              </div>
+              <p id="feedback-description-{{ item['item_id'] }}" class="feedback-overlay__description">Choose the main reason. We’ll use it with your overall learning activity to find a better match.</p>
+              <form class="recommendation-feedback__form" method="post" action="/api/recommendations/items/{{ item['item_id'] }}/feedback" data-feedback-form>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <fieldset class="feedback-options">
+                  <legend class="sr-only">Select one reason</legend>
+                  {% for code, label in feedback_reasons.items() %}
+                    <label class="feedback-option">
+                      <input type="radio" name="reason_code" value="{{ code }}">
+                      <span>{{ label }}</span>
+                    </label>
+                  {% endfor %}
+                </fieldset>
+                <div class="feedback-overlay__actions">
+                  <button class="button" type="submit" disabled>Submit feedback</button>
+                  <button class="button secondary" type="button" data-feedback-cancel>Cancel</button>
+                </div>
+              </form>
+            </div>
+          </article>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+  {% elif recommendation %}
+    <div class="empty-state recommendation-empty">
+      <h2>Your learning path is being refreshed</h2>
+      <p>Some previous suggestions are no longer available. Continue exploring and SmartReco will prepare an updated path.</p>
+      <a class="button" href="/courses">Browse courses</a>
+    </div>
+  {% else %}
+    <div class="empty-state recommendation-empty" data-manual-generate-container>
+      <h2>Nothing personalized yet</h2>
+      <p>You already have enough learning activity to request a personalized path.</p>
+      <div class="empty-actions" style="display: flex; gap: 0.75rem; justify-content: center; align-items: center; margin-top: 1rem; flex-wrap: wrap;">
+        <button id="generate-recommendations-btn" class="button" type="button" data-manual-generate-btn>Generate my recommendations</button>
+        <a class="button secondary" href="/courses">Browse courses</a>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', path='js/recommendation-feedback.js') }}" defer></script>{% endblock %}

@@ -1,0 +1,10 @@
+<article class="course-card related-course-card" data-related-course data-course-id="{{ related_course['id'] }}" data-source-course-id="{{ course.id }}" data-related-rank="{{ related_course['rank'] }}">
+  <div class="thumb"{% if related_course['thumbnail_url'] %} style="background-image:url('{{ related_course['thumbnail_url'] }}')"{% endif %}><span>{{ related_course['category'] }}</span></div>
+  <div class="card-body">
+    <p class="muted">{{ related_course['difficulty']|title }} · {{ related_course['duration_minutes'] }} min</p>
+    <h3><a href="/courses/{{ related_course['slug'] }}" data-related-course-click data-course-id="{{ related_course['id'] }}">{{ related_course['title'] }}</a></h3>
+    <p>{{ related_course['short_description'] }}</p>
+    <div class="card-meta"><span>{% if related_course['price'] == '0.00' %}Free{% else %}{{ related_course['currency'] }} {{ related_course['price'] }}{% endif %}</span><span>{% for tag in related_course['tags'] %}{{ tag }}{% if not loop.last %} · {% endif %}{% endfor %}</span></div>
+    {% set action = related_course['action'] %}{% include "catalog/_course_action.html" %}
+  </div>
+</article>

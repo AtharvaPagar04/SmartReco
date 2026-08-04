@@ -14,7 +14,7 @@ from app.csrf import validate_csrf_token
 from app.database import get_db
 from app.dependencies import get_admin
 from app.flash import flash
-from app.models import ActivityEvent, Course, User, VectorOutbox
+from app.models import ActivityEvent, Course, RecommendationFeedback, RecommendationItem, RecommendationRun, User, VectorOutbox
 from app.routers.helpers import page
 from app.schemas.course import CourseForm
 from app.repositories.vector_outbox import create as create_outbox
@@ -226,11 +226,38 @@ async def vector_sync(request: Request, admin: User = Depends(get_admin), db: As
     return page(request, "admin/vector_sync.html", current_user=admin, jobs=jobs)
 
 
+@router.get("/recommendations")
+async def recommendation_diagnostics(request: Request, admin: User = Depends(get_admin), db: AsyncSession = Depends(get_db), status: str = Query("", max_length=30), trigger_type: str = Query("", max_length=30), user: str = Query("", max_length=200), page_number: int = Query(1, alias="page", ge=1), page_size: int = Query(50, ge=1, le=100)):
+    filters = []
+    if status in {"PENDING", "RUNNING", "SUCCEEDED", "FALLBACK_SUCCEEDED", "FAILED", "SUPERSEDED"}:
+        filters.append(RecommendationRun.status == status)
+    if trigger_type:
+        filters.append(RecommendationRun.trigger_type == trigger_type)
+    if user:
+        filters.append(User.email.ilike(f"%{' '.join(user.split())}%"))
+    total = await db.scalar(select(func.count(RecommendationRun.id)).select_from(RecommendationRun).outerjoin(User).where(*filters)) or 0
+    pages = max(1, (total + page_size - 1) // page_size)
+    page_number = min(page_number, pages)
+    rows = list((await db.execute(select(RecommendationRun, User.email).outerjoin(User).where(*filters).order_by(RecommendationRun.created_at.desc(), RecommendationRun.id.desc()).limit(page_size).offset((page_number - 1) * page_size))).all())
+    return page(request, "admin/recommendations.html", current_user=admin, runs=rows, status=status, trigger_type=trigger_type, user=user, page=page_number, page_size=page_size, total=total, pages=pages)
+
+
+@router.get("/recommendations/{run_id}")
+async def recommendation_detail(run_id: str, request: Request, admin: User = Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    from sqlalchemy.orm import selectinload
+    run = await db.scalar(select(RecommendationRun).options(selectinload(RecommendationRun.items).selectinload(RecommendationItem.course)).where(RecommendationRun.id == run_id))
+    if not run:
+        raise HTTPException(404, "Recommendation run not found")
+    feedback_rows = list((await db.scalars(select(RecommendationFeedback).where(RecommendationFeedback.recommendation_run_id == run.id))).all())
+    feedback_by_item = {item.recommendation_item_id: item for item in feedback_rows}
+    return page(request, "admin/recommendation_detail.html", current_user=admin, run=run, feedback_by_item=feedback_by_item)
+
+
 @router.get("/events")
 async def events(request: Request, admin: User = Depends(get_admin), db: AsyncSession = Depends(get_db), event_type: str = Query("", max_length=40), user_id: str = Query("", max_length=36), user: str = Query("", max_length=200), course_id: str = Query("", max_length=36), date_from: str = Query("", max_length=30), date_to: str = Query("", max_length=30), session_prefix: str = Query("", max_length=20), page_number: int = Query(1, alias="page", ge=1), page_size: int = Query(50, ge=1, le=100)):
     from datetime import date
     filters = []
-    if event_type in {"PAGE_VIEW", "COURSE_IMPRESSION", "COURSE_VIEW", "COURSE_CLICK", "SEARCH", "FILTER_CHANGE", "DWELL", "ADMIN_COURSE_CREATED", "ADMIN_COURSE_UPDATED", "ADMIN_COURSE_DELETED"}:
+    if event_type in {"PAGE_VIEW", "COURSE_IMPRESSION", "COURSE_VIEW", "COURSE_CLICK", "SEARCH", "FILTER_CHANGE", "DWELL", "RECOMMENDATION_IMPRESSION", "RECOMMENDATION_CLICK", "RECOMMENDATION_DISMISS", "RECOMMENDATION_FEEDBACK_OPENED", "RECOMMENDATION_REJECTED", "RECOMMENDATION_REPLACEMENT_SHOWN", "ADMIN_COURSE_CREATED", "ADMIN_COURSE_UPDATED", "ADMIN_COURSE_DELETED"}:
         filters.append(ActivityEvent.event_type == event_type)
     if user_id:
         filters.append(ActivityEvent.user_id == user_id)

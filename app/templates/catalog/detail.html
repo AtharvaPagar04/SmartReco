@@ -1,2 +1,263 @@
-{% extends "base.html" %}{% block title %}{{ course.title }} — SmartReco{% endblock %}
-{% block content %}<a class="back-link" href="/courses">← Back to catalog</a><article class="course-detail" data-course-id="{{ course.id }}" data-course-view><div class="detail-visual thumb" style="{% if course.thumbnail_url %}background-image:url('{{ course.thumbnail_url }}'){% endif %}"><span>{{ course.category }}</span></div><div><p class="eyebrow">{{ course.category }} · {{ course.difficulty|title }}</p><h1>{{ course.title }}</h1><p class="lede">{{ course.short_description }}</p><div class="detail-facts"><span>By {{ course.instructor }}</span><span>{{ course.duration_minutes }} minutes</span><strong>{% if course.price == 0 %}Free{% else %}{{ course.currency }} {{ '%.2f'|format(course.price) }}{% endif %}</strong></div><div class="prose">{{ course.description }}</div><a class="button" href="/courses" data-course-click>Start exploring</a></div></article><section class="tag-row">{% for tag in course.tags %}<span>{{ tag }}</span>{% endfor %}</section>{% endblock %}
+{% extends "base.html" %}
+{% block title %}{{ course.title }} — SmartReco{% endblock %}
+
+{% block content %}
+<a class="back-link" href="/courses">← Back to catalog</a>
+
+<article class="course-detail-hero" data-course-id="{{ course.id }}" data-course-view>
+  <div class="hero-main">
+    {% if course.thumbnail_url %}
+    <div class="course-detail-banner">
+      <img src="{{ course.thumbnail_url }}" alt="{{ course.title }} cover image" class="course-banner-img">
+    </div>
+    {% endif %}
+
+    <div class="detail-eyebrow-row">
+      <span class="category-badge">{{ course.category }}</span>
+      <span class="difficulty-badge difficulty-{{ course.difficulty|lower }}">{{ course.difficulty|title }}</span>
+      {% if course.is_featured %}<span class="featured-badge">★ Featured</span>{% endif %}
+    </div>
+
+    <h1 class="course-title">{{ course.title }}</h1>
+    <p class="lede">{{ course.short_description }}</p>
+
+    <div class="detail-meta-strip">
+      <div class="meta-item">
+        <span class="meta-label">Instructor</span>
+        <strong class="meta-value">{{ course.instructor }}</strong>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Duration</span>
+        <strong class="meta-value">{{ course.duration_minutes }} minutes ({{ course.total_lessons_count }} lessons)</strong>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Estimated Effort</span>
+        <strong class="meta-value">{{ course.estimated_effort or '2-3 hours total' }}</strong>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Price</span>
+        <strong class="meta-value price-tag">{% if course.price == 0 %}Free{% else %}{{ course.currency }} {{ '%.2f'|format(course.price) }}{% endif %}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-cta-card">
+    <div class="cta-inner">
+      <div class="cta-price">
+        {% if course.price == 0 %}
+          <span class="free-label">100% Free</span>
+        {% else %}
+          <span class="price-amount">{{ course.currency }} {{ '%.2f'|format(course.price) }}</span>
+        {% endif %}
+        <span class="access-label">Full Lifetime Access</span>
+      </div>
+
+      {% if action.state == 'IN_PROGRESS' or action.state == 'COMPLETED' %}
+        <div class="enrollment-status-badge">
+          <span class="check-icon">✓</span> You are enrolled in this course
+        </div>
+      {% else %}
+        <p class="cta-note">{% if action.state == 'ANONYMOUS_FREE' or action.state == 'ANONYMOUS_PAID' %}Sign in to track your learning progress.{% else %}Instant access to all available course materials.{% endif %}</p>
+      {% endif %}
+      <div class="card-actions cta-actions">{% include "catalog/_course_action.html" %}{% if action.state == 'ANONYMOUS_FREE' %}<span class="sr-only"> Start exploring</span>{% endif %}</div>
+    </div>
+  </div>
+</article>
+
+<div class="course-detail-layout">
+  <div class="main-content-column">
+
+    <!-- 1. Course Overview -->
+    <section id="overview" class="detail-section">
+      <h2 class="section-title">Course Overview</h2>
+      <div class="prose-content">
+        <p>{{ course.description }}</p>
+      </div>
+    </section>
+
+    <!-- 2. What You Will Learn -->
+    {% if course.what_you_will_learn %}
+    <section id="what-you-will-learn" class="detail-section">
+      <h2 class="section-title">What You Will Learn</h2>
+      <div class="outcomes-grid">
+        {% for item in course.what_you_will_learn %}
+        <div class="outcome-card">
+          <span class="outcome-icon">✓</span>
+          <span class="outcome-text">{{ item }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- 3. Tools & Technologies Used -->
+    {% if course.tools_used %}
+    <section id="tools-tech" class="detail-section">
+      <h2 class="section-title">Tools & Technologies Used</h2>
+      <div class="tools-pills">
+        {% for tool in course.tools_used %}
+        <span class="tool-pill">{{ tool }}</span>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- 4. Structured Curriculum: Modules & Lessons -->
+    {% if course.curriculum %}
+    <section id="curriculum" class="detail-section">
+      <div class="curriculum-header">
+        <div>
+          <h2 class="section-title">Structured Curriculum</h2>
+          <p class="curriculum-subtitle">
+            {{ course.curriculum|length }} Modules &nbsp;·&nbsp;
+            {{ course.total_lessons_count }} Lessons &nbsp;·&nbsp;
+            {{ course.duration_minutes }} Minutes Total
+          </p>
+        </div>
+      </div>
+
+      <div class="modules-accordion-list">
+        {% for module in course.curriculum %}
+        <details class="module-card" {% if loop.first %}open{% endif %}>
+          <summary class="module-summary">
+            <div class="module-summary-left">
+              <span class="module-number">Module {{ loop.index }}</span>
+              <h3 class="module-title">{{ module.title }}</h3>
+            </div>
+            <div class="module-summary-right">
+              <span class="module-lesson-count">{{ module.lessons|length if module.lessons else 0 }} lessons</span>
+              <span class="chevron-icon">▼</span>
+            </div>
+          </summary>
+
+          <div class="module-body">
+            {% if module.description %}
+            <p class="module-description">{{ module.description }}</p>
+            {% endif %}
+
+            {% if module.lessons %}
+            <ul class="lessons-list">
+              {% for lesson in module.lessons %}
+              <li class="lesson-item">
+                <div class="lesson-main">
+                  <span class="lesson-icon">📄</span>
+                  <div class="lesson-info">
+                    <h4 class="lesson-title">{{ lesson.title }}</h4>
+                    {% if lesson.summary %}
+                    <p class="lesson-summary">{{ lesson.summary }}</p>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="lesson-meta">
+                  {% if lesson.type %}
+                  <span class="lesson-type-badge">{{ lesson.type }}</span>
+                  {% endif %}
+                  <span class="lesson-duration">{{ lesson.duration_minutes }} min</span>
+                </div>
+              </li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </div>
+        </details>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- 5. Practical Project / Final Outcome -->
+    {% if course.final_project %}
+    <section id="final-project" class="detail-section project-card-section">
+      <h2 class="section-title">Practical Project & Capstone Outcome</h2>
+      <div class="project-box">
+        <div class="project-badge">🚀 Capstone Project</div>
+        <h3 class="project-title">{{ course.final_project.title }}</h3>
+        <p class="project-description">{{ course.final_project.description }}</p>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- 6. Prerequisites & Intended Audience -->
+    <div class="dual-info-grid">
+      {% if course.prerequisites %}
+      <section id="prerequisites" class="detail-section card-box">
+        <h3 class="box-title">Prerequisites</h3>
+        <ul class="info-list">
+          {% for req in course.prerequisites %}
+          <li>{{ req }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
+      {% if course.target_audience %}
+      <section id="target-audience" class="detail-section card-box">
+        <h3 class="box-title">Intended Audience</h3>
+        <ul class="info-list">
+          {% for aud in course.target_audience %}
+          <li>{{ aud }}</li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+    </div>
+
+    <!-- 7. Instructor Information -->
+    <section id="instructor" class="detail-section instructor-section">
+      <h2 class="section-title">Instructor Information</h2>
+      <div class="instructor-card">
+        <div class="instructor-avatar">
+          <span>{{ course.instructor[0] if course.instructor else 'I' }}</span>
+        </div>
+        <div class="instructor-details">
+          <h3 class="instructor-name">{{ course.instructor }}</h3>
+          <p class="instructor-role">Course Author & Industry Expert</p>
+          <p class="instructor-bio">
+            {{ course.instructor_bio or 'Experienced professional practitioner dedicated to building high-quality learning materials.' }}
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Frequently Asked Questions -->
+    {% if course.faqs %}
+    <section id="faqs" class="detail-section faqs-section">
+      <h2 class="section-title">Frequently Asked Questions</h2>
+      <div class="faqs-list">
+        {% for faq in course.faqs %}
+        <details class="faq-item">
+          <summary class="faq-question">
+            <span>{{ faq.question }}</span>
+            <span class="chevron-icon">▼</span>
+          </summary>
+          <div class="faq-answer">
+            <p>{{ faq.answer }}</p>
+          </div>
+        </details>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- 9. Related Courses Section (Preserved) -->
+{% if related_courses %}
+<section class="related-courses-section" aria-labelledby="related-courses-title">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Continue learning</p>
+      <h2 id="related-courses-title">Related courses</h2>
+      <p class="muted">Explore courses connected to the topic you are viewing.</p>
+    </div>
+  </div>
+  <div class="related-course-grid">
+    {% for related_course in related_courses %}
+      {% include "catalog/_related_course_card.html" %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}

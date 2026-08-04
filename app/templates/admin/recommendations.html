@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Recommendation diagnostics — SmartReco{% endblock %}
+{% block content %}
+<header class="page-header">
+  <p class="eyebrow">Admin diagnostics</p>
+  <h1>Recommendation runs</h1>
+  <p class="page-header__lede">Validated workflow outcomes and sanitized operational metadata.</p>
+</header>
+
+<form class="filters compact" method="get">
+  <label>Status
+    <select name="status">
+      <option value="">All</option>
+      {% for value in ['SUCCEEDED','FALLBACK_SUCCEEDED','RUNNING','FAILED'] %}
+        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ value }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Trigger <input name="trigger_type" value="{{ trigger_type }}"></label>
+  <label>User email <input name="user" value="{{ user }}"></label>
+  <label>Page size
+    <select name="page_size">
+      <option value="50">50</option>
+      <option value="100" {% if page_size == 100 %}selected{% endif %}>100</option>
+    </select>
+  </label>
+  <button class="button" type="submit">Filter</button>
+</form>
+
+<div class="results-bar">
+  <strong>{{ total }} matching run{% if total != 1 %}s{% endif %}</strong>
+  <span>Page {{ page }} of {{ pages or 1 }}</span>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Run</th>
+        <th>User</th>
+        <th>Trigger</th>
+        <th>Status</th>
+        <th>Profile</th>
+        <th>Candidates</th>
+        <th>Model</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run, email in runs %}
+      <tr>
+        <td><a href="/admin/recommendations/{{ run.id }}"><code>{{ run.id[:8] }}…</code></a></td>
+        <td>{{ email or '—' }}</td>
+        <td><code>{{ run.trigger_type }}</code></td>
+        <td>
+          {{ run.status }}
+          {% if run.used_llm_fallback %}
+            <br><small style="color: var(--color-accent); font-weight: 600;">Deterministic fallback</small>
+          {% endif %}
+        </td>
+        <td>v{{ run.profile_version }}</td>
+        <td>{{ run.candidate_count }} &rarr; {{ run.selected_count }}</td>
+        <td>{{ run.model_name or 'none' }}</td>
+        <td>{{ run.created_at.strftime('%b %d %H:%M UTC') }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" style="text-align: center; padding: 2rem; color: var(--color-text-secondary);">No recommendation runs match these filters.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<nav class="pager" aria-label="Recommendation run pages">
+  {% if page > 1 %}<a href="{{ request.url.include_query_params(page=page-1) }}">&larr; Previous</a>{% else %}<span></span>{% endif %}
+  {% if page < pages %}<a href="{{ request.url.include_query_params(page=page+1) }}">Next &rarr;</a>{% else %}<span></span>{% endif %}
+</nav>
+{% endblock %}

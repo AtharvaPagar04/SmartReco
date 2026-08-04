@@ -33,6 +33,35 @@ class Course(TimestampMixin, Base):
     indexed_embedding_dimension: Mapped[int | None] = mapped_column(Integer)
     indexed_embedding_schema_version: Mapped[int | None] = mapped_column(Integer)
 
+    # Detailed Course Content
+    what_you_will_learn: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    prerequisites: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    target_audience: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    tools_used: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    estimated_effort: Mapped[str | None] = mapped_column(String(120))
+    curriculum: Mapped[list[dict]] = mapped_column(JSON, default=list, nullable=False)
+    final_project: Mapped[dict | None] = mapped_column(JSON)
+    instructor_bio: Mapped[str | None] = mapped_column(Text)
+    faqs: Mapped[list[dict]] = mapped_column(JSON, default=list, nullable=False)
+
+    @property
+    def total_lessons_count(self) -> int:
+        if not self.curriculum:
+            return 0
+        return sum(len(module.get("lessons", [])) for module in self.curriculum if isinstance(module, dict))
+
+    @property
+    def total_curriculum_minutes(self) -> int:
+        if not self.curriculum:
+            return self.duration_minutes
+        total = 0
+        for module in self.curriculum:
+            if isinstance(module, dict):
+                for lesson in module.get("lessons", []):
+                    if isinstance(lesson, dict):
+                        total += int(lesson.get("duration_minutes", 0))
+        return total or self.duration_minutes
+
     events = relationship("ActivityEvent", back_populates="course")
     outbox_rows = relationship("VectorOutbox", back_populates="course")
 

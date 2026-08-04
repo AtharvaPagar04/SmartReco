@@ -1,8 +1,8 @@
-# SmartReco — Phase 1
+# SmartReco — Phase 2
 
-SmartReco is a server-rendered course marketplace that lays the data foundation for a future behavioral recommendation product. Phase 1 includes email/password authentication, user/admin roles, a searchable catalog, admin CRUD, a transactional SQL vector outbox, Mesh embeddings, Qdrant synchronization, batched behavioral tracking, retries, and admin diagnostics.
+SmartReco is a server-rendered course marketplace with a deterministic behavioral profile and catalog-grounded recommendation workflow. It preserves the Phase 1 foundation—authentication, catalog search, admin CRUD, transactional vector sync, Mesh embeddings, Qdrant, and behavioral tracking—and adds bounded LangGraph orchestration, grounded recommendation persistence, fallback retrieval/copy, opt-in email digests, and admin diagnostics.
 
-Recommendation generation is deliberately not implemented: there are no recommendations, inferred interests, recommendation narratives, LangGraph workflows, chat-completion calls, personalized sections, or scheduled digests in this phase.
+Recommendations are available only to authenticated users. They are based on observed course activity, never on sensitive traits. Every AI call uses Mesh API; deterministic SQL fallback and copy keep the application usable when Mesh or Qdrant is unavailable.
 
 ## Architecture
 
@@ -15,8 +15,13 @@ flowchart LR
     A[Admin] --> F
     F --> O[(Vector Outbox)]
     O --> S[Async APScheduler Worker]
-    S --> M[Mesh Embeddings API]
+    S --> M[Mesh Embeddings and Chat API]
     S --> Q[(Qdrant)]
+    E --> R[RecommendationState]
+    R --> G[Bounded LangGraph]
+    G --> P[Profile and deterministic ranking]
+    G --> N[RecommendationRun and Items]
+    N --> F[Account UI and Email Digest]
 ```
 
 The HTTP layer is split from SQL models, services, and scheduler jobs. SQL is canonical. Course writes and their vector operations commit together in `vector_outbox`; the worker performs Mesh/Qdrant work later with bounded retries and course-version checks.
@@ -80,7 +85,54 @@ The dropdown follows the ARIA combobox/listbox pattern with `aria-expanded`, `ar
 
 ### Version 1 event contract
 
-Supported event types are `PAGE_VIEW`, `COURSE_IMPRESSION`, `COURSE_VIEW`, `COURSE_CLICK`, `SEARCH`, `FILTER_CHANGE`, and `DWELL`. All browser events require `event_id`, `schema_version`, `event_type`, `page_path`, and `occurred_at`; `course_id` is required for course view/click/impression and for dwell on `/courses/{slug}`; `SEARCH` requires a non-empty normalized `search_query`; `DWELL` requires bounded non-negative `duration_ms`. Metadata is optional and capped. Duplicate `event_id` delivery is successful and counted as a duplicate, not stored twice.
+Supported event types include course activity plus `RECOMMENDATION_FEEDBACK_OPENED`, `RECOMMENDATION_REJECTED`, and `RECOMMENDATION_REPLACEMENT_SHOWN`. All browser events require `event_id`, `schema_version`, `event_type`, `page_path`, and `occurred_at`; metadata is optional and capped. Duplicate `event_id` delivery is successful and counted as a duplicate, not stored twice.
+
+## Phase 2 recommendation workflow
+
+Behavior flows through `ActivityEvent` → `RecommendationState` → the deterministic profile builder → eligibility policy → Mesh embedding/Qdrant or SQL fallback → deterministic ranker → bounded LangGraph → Mesh structured copy → grounding validator → `RecommendationRun` and `RecommendationItem`. The graph has explicit profile, retrieval, ranking, quality, one-step refinement, generation, validation, fallback, and persistence nodes. It never receives raw event history or credentials and cannot write arbitrary SQL or Qdrant data.
+
+Profiles use a 30-day window with a 14-day half-life decay: `0.5 ** (event_age_days / half_life_days)`. Searches, clicks, views, qualified dwell, filters, impressions, and recommendation interactions have different bounded signal strengths; impressions remain weak. Profile hashes prevent unnecessary rebuilds. Recommendation runs observe a 30-minute cooldown, six-hour freshness TTL, bounded leases, and retry backoff.
+
+Semantic retrieval uses the existing Qdrant collection and rejects inactive or incompatible-lineage points before reloading SQL course truth. SQL retrieval is used for cold start, missing Mesh configuration, Qdrant failures, and low-quality retrieval. Ranking combines semantic, category, tag, search, dwell, novelty, featured, and recent-view components with deterministic diversity limits. Refinement is attempted at most once.
+
+Mesh chat output is JSON-only and may select only supplied course IDs. It is validated for active-course membership, duplicate IDs, bounded text, evidence, and prohibited guarantees. Invalid output gets one repair attempt, then deterministic fallback copy. No recommendation is generated during event ingestion.
+
+## Recommendation API and UI
+
+Authenticated endpoints:
+
+```text
+GET  /api/recommendations/current
+POST /api/recommendations/refresh
+POST /api/recommendations/items/{item_id}/dismiss
+POST /api/recommendations/items/{item_id}/feedback
+GET  /recommendations
+POST /account/recommendation-preferences
+```
+
+The account page and `/recommendations` display grounded course cards, fallback/cold-start messaging, qualified recommendation impressions, click attribution, and CSRF-protected feedback. “Not for me” records one of the stable reason codes in migration `0007_recommendation_feedback`, hides the rejected item, preserves the other visible cards, and selects one deterministic replacement without a long-running request. The old dismissal endpoint remains compatible as `NOT_RELEVANT_NOW`. Recommendation data is scoped to the current user. Admins can inspect paginated runs and feedback markers at `/admin/recommendations`.
+
+## Contextual related courses
+
+Course-detail pages also show up to two `Related courses` cards below the current course tags. This is a separate contextual path: it uses the current course's stored Qdrant vector, validates vector lineage, reloads active course truth from SQL, and applies deterministic category, tag-overlap, difficulty, and semantic scoring. It never reads user activity, profiles, recommendation runs, or email preferences, and it never calls Mesh chat or LangGraph. If Qdrant is unavailable, stale, missing, or too slow, bounded SQL fallback candidates keep the course page available. The result cache is keyed by course/version and embedding lineage.
+
+Related cards use the existing batched tracker with `COURSE_IMPRESSION` and `COURSE_CLICK` events carrying `metadata.source=related_course`, `source_course_id`, `target_course_id`, and `rank`. They do not use recommendation run/item IDs, so contextual similarity remains measurable separately from personalized recommendations.
+
+## Scheduled delivery and observability
+
+Email delivery is opt-in. The console provider is the safe default; SMTP uses `EMAIL_PROVIDER=smtp` plus the documented SMTP settings. APScheduler queues one digest per user-local date, sends bounded batches, records attempts, and retries transient failures. LangSmith tracing is optional and disabled unless `LANGSMITH_TRACING=true` and a key are configured; recommendation generation does not fail when tracing is unavailable.
+
+Phase 2 configuration includes `MESH_BASE_URL`, `MESH_CHAT_MODEL`, `MESH_REQUEST_TIMEOUT_SECONDS`, `MESH_MAX_RETRIES`, `MESH_TOTAL_BUDGET_SECONDS` (default 70 seconds), `RECOMMENDATION_*`, `RELATED_COURSES_*`, `EMAIL_*`, `SMTP_*`, `APP_BASE_URL`, and optional `LANGSMITH_*` variables. The total Mesh budget covers the primary call and the single structured-output repair attempt. Provider failures fall back to deterministic copy with sanitized run errors; cancellation and unexpected failures finalize the owned run through a fresh session. `.env.example` contains placeholders only.
+
+## Phase 2 commands
+
+```bash
+python scripts/generate_recommendation.py --user-id UUID --no-llm --show-profile --show-candidates
+python scripts/evaluate_recommendations.py --dry-run
+python scripts/reconcile_vectors.py --dry-run
+```
+
+The generation command supports `--dry-run`, `--no-llm`, `--show-profile`, and `--show-candidates`. Its JSON reports `llm_enabled`, actual `llm_called`, and the backward-compatible `llm` field. The evaluation harness is read-only and uses deterministic personas; it does not call Mesh.
 
 ## Seed repair and account activity
 
@@ -123,6 +175,22 @@ Tests use an isolated SQLite database and no real Mesh, Qdrant, network, or prod
 
 Use PostgreSQL and remote Qdrant for multi-process deployments. Run migrations before starting the web service, set `SESSION_HTTPS_ONLY=true`, use a long random secret, keep `.env` out of version control, and run one dedicated scheduler process when multiple web workers are used. Do not use reload mode in production.
 
-## Phase 2 handoff
+## Future handoff
 
-Future work can consume `app/services/event_service.py` and the `ActivityEvent` repository for behavior aggregation, `catalog_service.py` for canonical course data, `embedding_service.py` for Mesh embeddings, and `VectorStore.search_courses()` for semantic retrieval. Recommendation tables, ranking/profile logic, a LangGraph workflow, scheduled digests, and LangSmith tracing should be added only in Phase 2.
+Future work can extend `app/services/interest_profile_service.py`, `recommendation_retrieval_service.py`, `recommendation_ranking_service.py`, and the bounded graph without rewriting Phase 1. Additional evaluation, enrollment/completion signals, and delivery channels should reuse the validated recommendation persistence and policy boundaries.
+
+## Course commerce
+
+Commerce is intentionally demo-only. `shopping_carts` hold intent, `orders` hold checkout snapshots, `course_entitlements` grant access, and `enrollments` begin learning. Purchase grants course access; starting the course creates enrollment. Existing enrollments are backfilled as `LEGACY_ENROLLMENT` by migration `0006_commerce`.
+
+Course actions are context-sensitive: free or purchased courses show `Start course`, in-progress courses show `Continue course`, completed courses show `Review course`, paid courses show `Buy course` plus `Add to cart`, and cart items show `Buy course` plus `View cart`. Anonymous users see the corresponding sign-in action.
+
+`PAYMENTS_ENABLED=true`, `PAYMENTS_MODE=demo`, `CART_MAX_ITEMS=25`, and `DEFAULT_CURRENCY=USD` are safe defaults. Demo checkout does not collect payment credentials or process real money. Replace `DemoPaymentGateway` in `app/services/payments/` for a real provider without changing cart, order, entitlement, or enrollment services.
+
+## Explainable learning path
+
+`/recommendations` separates learner context from next-step suggestions. Active enrollments appear under Continue learning, purchased-but-unstarted entitlements appear under Ready to start, and completed or enrolled courses influence progression while remaining excluded from candidates. Recent views, clicks, dwell, qualified impressions, searches, and dismissals remain bounded profile signals; a view is never treated as completion.
+
+Each suggestion has a `reason`, `how_it_helps`, `skill_connection`, and bounded evidence identifiers stored in the existing recommendation evidence JSON. The server resolves safe labels and filters stale, owned, enrolled, completed, inactive, and dismissed courses at render time. Mesh receives only safe course summaries, candidate IDs, and allowed evidence IDs; deterministic copy is used when its output is unavailable or fails grounding validation.
+
+Recommendation feedback is bounded and recency-decayed: “too advanced” and “too basic” adjust difficulty, “more practical” favors project-oriented metadata, “too expensive” favors free or lower-priced courses, and topic rejection penalizes matching categories/tags without erasing unrelated interests. Free-form comments are optional, capped, and never sent to Mesh or browser profile payloads.

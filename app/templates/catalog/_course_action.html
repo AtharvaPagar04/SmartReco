@@ -1,0 +1,18 @@
+{% if action.primary_method == 'POST' %}
+<form method="post" action="{{ action.primary_url }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button class="button" type="submit">{{ action.primary_label }}</button>
+</form>
+{% else %}
+<a class="button" href="{{ action.primary_url }}">{{ action.primary_label }}</a>
+{% endif %}
+{% if action.secondary_label %}
+  {% if action.secondary_method == 'POST' %}
+  <form method="post" action="{{ action.secondary_url }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="button secondary" type="submit">{{ action.secondary_label }}</button>
+  </form>
+  {% else %}
+  <a class="button secondary" href="{{ action.secondary_url }}">{{ action.secondary_label }}</a>
+  {% endif %}
+{% endif %}

@@ -1,0 +1,743 @@
+/* ═══════════════════════════════════════════════════════════════
+   SmartReco Design System — Layered Theme Enhancement
+   Applied AFTER app.css to refine visual quality without
+   breaking any existing layout or functionality.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 1. Google Fonts ─────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+/* ── 2. Design Tokens ────────────────────────────────────────── */
+:root {
+  /* Refined palette — deeper, more contrast */
+  --ink: #0f1d15;
+  --muted: #5a6960;
+  --line: #d2ddd6;
+  --paper: #f0f4f1;
+  --card: #ffffff;
+  --green: #1a6b42;
+  --mint: #d4eddb;
+  --orange: #cf6d2e;
+
+  /* Shadows with more depth */
+  --shadow: 0 8px 32px rgba(15, 29, 21, 0.08);
+  --shadow-sm: 0 2px 8px rgba(15, 29, 21, 0.06);
+  --shadow-lg: 0 20px 50px rgba(15, 29, 21, 0.12);
+  --shadow-card-hover: 0 16px 40px rgba(15, 29, 21, 0.14);
+
+  /* Transitions */
+  --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ── 3. Base Reset Refinements ───────────────────────────────── */
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── 4. Header Polish ────────────────────────────────────────── */
+.site-header {
+  height: 68px;
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 3px rgba(15, 29, 21, 0.04);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.brand {
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+nav a {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  transition: all 180ms var(--ease);
+}
+
+nav a:hover {
+  background: var(--mint);
+  color: var(--green);
+  text-decoration: none;
+}
+
+/* ── 5. Hero Section Refinement ──────────────────────────────── */
+.hero h1 {
+  font-weight: 900;
+  letter-spacing: -0.05em;
+}
+
+.hero-art {
+  position: relative;
+  background: linear-gradient(135deg, #0d2818 0%, #164a2c 50%, #1e5c38 100%);
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(13, 40, 24, 0.25);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border: 1px solid rgba(26, 107, 66, 0.25);
+  transition: transform 400ms var(--ease), box-shadow 400ms var(--ease);
+}
+
+.hero-art:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 28px 56px rgba(13, 40, 24, 0.35);
+}
+
+.hero-img {
+  width: 100%;
+  height: 100%;
+  max-height: 380px;
+  object-fit: cover;
+  border-radius: 16px;
+  display: block;
+}
+
+.hero-search input {
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  transition: border-color 200ms var(--ease), box-shadow 200ms var(--ease);
+}
+
+.hero-search input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(26, 107, 66, 0.12);
+  outline: none;
+}
+
+/* ── 6. Buttons ──────────────────────────────────────────────── */
+.button {
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 10px;
+  padding: 11px 20px;
+  border: none;
+  transition: all 180ms var(--ease);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(26, 107, 66, 0.2);
+}
+
+.button:active {
+  transform: translateY(0);
+}
+
+.button.secondary {
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.button.secondary:hover {
+  background: var(--mint);
+  border-color: #b8dfc4;
+}
+
+.button.danger {
+  background: #c0392b;
+}
+
+.button.danger:hover {
+  background: #a93226;
+}
+
+/* ── 7. Course Cards ─────────────────────────────────────────── */
+.course-card {
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  transition: transform 250ms var(--ease), box-shadow 250ms var(--ease), border-color 250ms var(--ease);
+  overflow: hidden;
+}
+
+.course-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: #b8dfc4;
+}
+
+.course-card .thumb {
+  height: 160px;
+  background: linear-gradient(135deg, #0f2e1d 0%, #1a6b42 40%, #2d8a58 100%);
+  border-radius: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.course-card .thumb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 50%, rgba(0, 0, 0, 0.25) 100%);
+  pointer-events: none;
+}
+
+.course-card .thumb span {
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  color: var(--green);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.card-body {
+  padding: 18px 20px;
+}
+
+.card-body h3 {
+  margin: 6px 0 4px;
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.card-body h3 a {
+  transition: color 150ms var(--ease);
+}
+
+.card-body h3 a:hover {
+  color: var(--green);
+}
+
+.card-body p {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-meta {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.card-meta strong {
+  color: var(--green);
+  font-weight: 800;
+}
+
+.card-actions {
+  margin-top: 12px;
+}
+
+.card-actions .button {
+  width: 100%;
+  text-align: center;
+  padding: 10px 16px;
+  font-size: 13px;
+}
+
+/* ── 8. Filters Bar ──────────────────────────────────────────── */
+.filters {
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+}
+
+.filters label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.filters input,
+.filters select {
+  border-radius: 8px;
+  border: 1.5px solid var(--line);
+  font-weight: 500;
+  transition: border-color 200ms;
+}
+
+.filters input:focus,
+.filters select:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(26, 107, 66, 0.1);
+  outline: none;
+}
+
+/* ── 9. Page Headings ────────────────────────────────────────── */
+.page-heading h1 {
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+/* ── 10. Empty States ────────────────────────────────────────── */
+.empty {
+  border: 2px dashed #c3d4c8;
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: none;
+}
+
+.empty h2, .empty h3 {
+  font-weight: 800;
+}
+
+/* ── 11. Panels & Stats ──────────────────────────────────────── */
+.panel {
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 200ms var(--ease);
+}
+
+.panel:hover {
+  box-shadow: var(--shadow);
+}
+
+.stat {
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  transition: transform 200ms var(--ease), box-shadow 200ms var(--ease);
+}
+
+.stat:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.stat strong {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+/* ── 12. Admin Links Grid ────────────────────────────────────── */
+.admin-links .panel {
+  transition: transform 200ms var(--ease), box-shadow 200ms var(--ease), border-color 200ms var(--ease);
+}
+
+.admin-links .panel:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: var(--green);
+  text-decoration: none;
+}
+
+.admin-links .panel h2 {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+/* ── 13. Tables ──────────────────────────────────────────────── */
+.table-wrap {
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line);
+}
+
+table th {
+  background: var(--paper);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.badge {
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.status {
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* ── 14. Auth Cards ──────────────────────────────────────────── */
+.auth-card, .form-page {
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--line);
+}
+
+.auth-card h1 {
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.auth-card input,
+.form-page input,
+.auth-card select,
+.form-page select,
+.auth-card textarea,
+.form-page textarea {
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  padding: 12px 14px;
+  font-size: 14px;
+  transition: border-color 200ms, box-shadow 200ms;
+}
+
+.auth-card input:focus,
+.form-page input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(26, 107, 66, 0.12);
+  outline: none;
+}
+
+/* ── 15. Footer ──────────────────────────────────────────────── */
+.footer {
+  background: #0f1d15;
+  color: rgba(255, 255, 255, 0.6);
+  border-top: none;
+  padding: 28px 24px;
+  margin-top: 80px;
+  max-width: 100%;
+}
+
+.footer span:first-child {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 700;
+}
+
+/* ── 16. Alerts ──────────────────────────────────────────────── */
+.alert {
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.alert.success {
+  background: #d4eddb;
+  color: #155d36;
+  border: 1px solid #b8dfc4;
+}
+
+.alert.error {
+  background: #fde5df;
+  color: #8f2a1e;
+  border: 1px solid #f5c6be;
+}
+
+/* ── 17. Pager ───────────────────────────────────────────────── */
+.pager a {
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  transition: all 180ms var(--ease);
+}
+
+.pager a:hover {
+  background: var(--mint);
+  border-color: #b8dfc4;
+  text-decoration: none;
+}
+
+/* ── 18. Search Autocomplete ─────────────────────────────────── */
+.search-listbox {
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--line);
+}
+
+.search-option:hover, .search-option.active {
+  background: var(--mint);
+}
+
+/* ── 19. Course Detail Page ──────────────────────────────────── */
+.course-detail-hero {
+  gap: 32px;
+}
+
+.hero-cta-card {
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.detail-section {
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.module-card {
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}
+
+.module-card[open] {
+  border-color: #b8dfc4;
+  box-shadow: var(--shadow-sm);
+}
+
+.module-summary {
+  border-radius: 12px;
+}
+
+.tool-pill {
+  border-radius: 20px;
+  font-weight: 700;
+}
+
+.outcome-card {
+  border-radius: 10px;
+}
+
+.project-card-section {
+  border-radius: 16px;
+  background: linear-gradient(135deg, #0f2e1d 0%, #1a5c3a 50%, #1a6b42 100%);
+}
+
+.faq-item {
+  border-radius: 10px;
+}
+
+/* ── 20. Recommendation Page ─────────────────────────────────── */
+.recommendation-card {
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 250ms var(--ease), box-shadow 250ms var(--ease);
+}
+
+.recommendation-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.learning-context-panel {
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.learning-context-group {
+  border-radius: 12px;
+}
+
+.continue-learning-card {
+  border-radius: 14px;
+}
+
+.recommendation-explanation {
+  border-radius: 10px;
+}
+
+.recommendation-benefit {
+  border-radius: 10px;
+}
+
+.evidence-chip {
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+/* ── 21. Floating Activity Widget ────────────────────────────── */
+.floating-activity-widget {
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--line);
+  z-index: 150;
+  background: var(--card);
+}
+
+.site-header {
+  z-index: 100;
+}
+
+.activity-drag-handle {
+  border-radius: 14px 14px 0 0;
+}
+
+.floating-activity-launcher {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 140;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  color: var(--ink);
+  padding: 8px 16px;
+  border-radius: 28px;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: var(--shadow-lg);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 200ms var(--ease);
+}
+
+.floating-activity-launcher:hover {
+  background: var(--mint);
+  border-color: #b8dfc4;
+  color: var(--green);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.live-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #27ae60;
+  display: inline-block;
+  box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.4);
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(39, 174, 96, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0); }
+}
+
+/* ── 22. Tag Rows ────────────────────────────────────────────── */
+.tag-row span {
+  border-radius: 20px;
+  font-weight: 700;
+}
+
+/* ── 23. Category Panel ──────────────────────────────────────── */
+.category-panel {
+  border-radius: 20px;
+  background: linear-gradient(135deg, #0f1d15 0%, #1a3a28 100%);
+}
+
+/* ── 24. Related Course Cards ────────────────────────────────── */
+.related-course-card {
+  border-radius: 14px;
+}
+
+/* ── 25. Filters Alignment Fix ───────────────────────────────── */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.filters label {
+  flex: 1 1 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.filters input,
+.filters select {
+  height: 40px;
+  border-radius: 8px;
+  border: 1.5px solid var(--line);
+  padding: 0 12px;
+  font-size: 13.5px;
+}
+
+.filters .button,
+.filters a.button {
+  height: 40px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+/* ── 26. Footer Alignment Fix ────────────────────────────────── */
+.footer {
+  background: #0d1a12;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 32px 0;
+  margin-top: 80px;
+  width: 100%;
+}
+
+.footer span:first-child {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+/* ── 27. Focus Visible ───────────────────────────────────────── */
+:focus-visible {
+  outline: 3px solid rgba(26, 107, 66, 0.3);
+  outline-offset: 2px;
+}
+
+/* ── 28. Selection Color ─────────────────────────────────────── */
+::selection {
+  background: var(--mint);
+  color: var(--ink);
+}
+
+/* ── 29. Scrollbar Styling ───────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c3d4c8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9db5a5;
+}
+
+/* ── 30. Smooth Scroll ───────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .course-card, .stat, .panel, .recommendation-card,
+  .admin-links .panel, .button, .hero-art {
+    transition: none;
+  }
+}
+

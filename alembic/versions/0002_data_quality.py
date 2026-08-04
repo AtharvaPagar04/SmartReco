@@ -2,7 +2,7 @@
 
 from uuid import uuid4
 
-from alembic import op
+from alembic import context, op
 import sqlalchemy as sa
 
 revision = "0002_data_quality"
@@ -12,6 +12,18 @@ depends_on = None
 
 
 def upgrade() -> None:
+    if context.is_offline_mode():
+        op.add_column("activity_events", sa.Column("event_id", sa.String(36), nullable=False))
+        op.add_column("activity_events", sa.Column("schema_version", sa.Integer(), nullable=False, server_default="1"))
+        op.create_index("ix_activity_event_id", "activity_events", ["event_id"], unique=True)
+        op.add_column("courses", sa.Column("indexed_embedding_model", sa.String(160), nullable=True))
+        op.add_column("courses", sa.Column("indexed_embedding_dimension", sa.Integer(), nullable=True))
+        op.add_column("courses", sa.Column("indexed_embedding_schema_version", sa.Integer(), nullable=True))
+        op.add_column("vector_outbox", sa.Column("embedding_model", sa.String(160), nullable=False, server_default="openai/text-embedding-3-small"))
+        op.add_column("vector_outbox", sa.Column("embedding_dimension", sa.Integer(), nullable=False, server_default="1536"))
+        op.add_column("vector_outbox", sa.Column("embedding_schema_version", sa.Integer(), nullable=False, server_default="1"))
+        return
+
     bind = op.get_bind()
     inspector = sa.inspect(bind)
     activity_columns = {column["name"] for column in inspector.get_columns("activity_events")}

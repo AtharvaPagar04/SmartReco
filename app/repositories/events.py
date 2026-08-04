@@ -85,3 +85,18 @@ async def account_activity(db: AsyncSession, user_id: str) -> AccountActivity:
     }
     last_active = await db.scalar(select(func.max(ActivityEvent.occurred_at)).where(ActivityEvent.user_id == user_id))
     return AccountActivity(viewed, recent_searches, categories_explored, weekly, last_active)
+
+
+async def recent_viewed_for_session(db: AsyncSession, session_id: str) -> list[ViewedCourse]:
+    meaningful = ("COURSE_VIEW", "COURSE_CLICK", "DWELL")
+    dwell_minutes = func.coalesce(func.sum(case((ActivityEvent.event_type == "DWELL", ActivityEvent.duration_ms), else_=0)), 0)
+    viewed_rows = (await db.execute(
+        select(Course.title, Course.slug, Course.category, Course.is_active, func.max(ActivityEvent.occurred_at), dwell_minutes)
+        .join(Course, Course.id == ActivityEvent.course_id)
+        .where(ActivityEvent.session_id == session_id, ActivityEvent.event_type.in_(meaningful), ActivityEvent.course_id.is_not(None))
+        .group_by(Course.id)
+        .order_by(func.max(ActivityEvent.occurred_at).desc(), Course.id)
+        .limit(8)
+    )).all()
+    return [ViewedCourse(title=row[0], slug=row[1], category=row[2], is_active=row[3], last_viewed_at=row[4], dwell_minutes=round((row[5] or 0) / 60000)) for row in viewed_rows]
+

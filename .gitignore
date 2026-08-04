@@ -8,7 +8,8 @@ __pycache__/
 .mypy_cache/
 .venv/
 venv/
-smartreco.db
+.venv311/
+smartreco.db*
 *.sqlite
 *.sqlite3
 data/qdrant/
@@ -18,4 +19,3 @@ htmlcov/
 .idea/
 .vscode/
 graphify-out/
-

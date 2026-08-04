@@ -57,3 +57,36 @@ async def batch(request: Request, db: AsyncSession = Depends(get_db)):
 @router.post("/beacon")
 async def beacon(request: Request, db: AsyncSession = Depends(get_db)):
     return await _ingest(request, db, beacon=True)
+
+
+@router.get("/recent")
+async def get_recent_activity(request: Request, db: AsyncSession = Depends(get_db)):
+    from app.repositories.events import account_activity, recent_viewed_for_session
+    user = await current_user(request, db)
+    sess_id = server_session_id(request.session)
+
+    if user:
+        activity = await account_activity(db, user.id)
+        viewed_list = activity.recently_viewed_courses
+        last_active = activity.last_active_at
+    else:
+        viewed_list = await recent_viewed_for_session(db, sess_id)
+        last_active = viewed_list[0].last_viewed_at if viewed_list else None
+
+    recently_viewed = [
+        {
+            "title": item.title,
+            "slug": item.slug,
+            "category": item.category,
+            "is_active": item.is_active,
+            "dwell_minutes": item.dwell_minutes,
+            "last_viewed_at": item.last_viewed_at.strftime('%b %d, %Y %H:%M') if item.last_viewed_at else None,
+        }
+        for item in viewed_list
+    ]
+
+    return {
+        "authenticated": user is not None,
+        "recently_viewed": recently_viewed,
+        "last_active_at": last_active.strftime('%b %d, %Y %H:%M UTC') if last_active else None
+    }
