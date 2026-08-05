@@ -9,12 +9,12 @@ import scripts.seed_data as seed_script
 async def test_all_seeded_courses_have_rich_content(db_session):
     await seed_script.main(reset=True)
     courses = list((await db_session.execute(select(Course).where(Course.is_active.is_(True)))).scalars())
-    assert len(courses) == 30
+    assert len(courses) == 60
 
     forbidden_placeholders = {"lorem ipsum", "lesson 1", "lesson 2", "learn more about this topic"}
     thumbnails = [c.thumbnail_url for c in courses]
     assert all(t and t.startswith("/static/images/courses/") for t in thumbnails), "All courses must have static thumbnail image URLs"
-    assert len(set(thumbnails)) == 30, "No thumbnail image URL may be repeated across courses"
+    assert len(set(thumbnails)) == 60, "No thumbnail image URL may be repeated across courses"
 
     for course in courses:
         assert course.what_you_will_learn, f"Course {course.slug} missing what_you_will_learn"

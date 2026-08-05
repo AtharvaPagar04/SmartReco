@@ -39,9 +39,9 @@ def test_legacy_path_values_remain_readable():
     value = LearningPathInput.model_validate({"primary_domain": "PYTHON", "secondary_domains": ["RAG"], "goal": "PROJECTS", "level": "BEGINNER", "learning_preferences": ["FOUNDATIONS"], "format_preference": "PROJECTS", "path_length": "STANDARD", "weekly_hours": 5})
     assert value.goals == ["PROJECTS"]
     assert value.format_preferences == ["PROJECTS"]
-    assert value.path_length == "EXTENDED"
+    assert value.path_length == "BALANCED"
 def test_deterministic_path_orders_progression_and_respects_total_budget():
-    path_input = LearningPathInput(primary_domain="AGENTIC_AI", goal="PRODUCTION", level="BEGINNER", learning_preferences=["PROJECTS", "PRODUCTION"], weekly_hours=5, budget_type="CUSTOM", budget_amount=Decimal("20"), path_length="STANDARD")
+    path_input = LearningPathInput(primary_domain="AGENTIC_AI", goal="PRODUCTION", level="BEGINNER", learning_preferences=["PROJECTS", "PRODUCTION"], weekly_hours=5, budget_type="CUSTOM", budget_amount=Decimal("20"), path_length="FOCUSED")
     candidates = [
         RecommendationCandidate(course("Multi-Agent Orchestration", "Agentic AI", "ADVANCED", ["orchestration"], 30)),
         RecommendationCandidate(course("Introduction to Agentic AI", "Agentic AI", "BEGINNER", ["agents"], 0)),

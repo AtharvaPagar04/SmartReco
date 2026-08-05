@@ -47,7 +47,9 @@ async def test_fresh_database_migration(tmp_path, monkeypatch):
     assert "completed_at" in columns
     assert len(fks) >= 2
     assert any(uq["name"] == "uq_enrollment_user_course" for uq in uqs)
-    assert rev == "0008_learning_paths"
+    assert rev == "0010_google_external_identities"
+
+
 
 
 @pytest.mark.asyncio
@@ -149,4 +151,4 @@ async def test_migration_downgrade_and_reupgrade(tmp_path, monkeypatch):
     await engine.dispose()
 
     assert "enrollments" in tables
-    assert rev == "0008_learning_paths"
+    assert rev == "0010_google_external_identities"

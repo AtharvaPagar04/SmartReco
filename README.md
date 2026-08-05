@@ -66,6 +66,19 @@ The rebuild queues active courses and reuses the same idempotent worker path; it
 
 Passwords use Argon2 through `pwdlib`. Sessions are signed Starlette cookies with minimal IDs, role checks reload the user from SQL, login replaces authentication state, and logout is a CSRF-protected POST. HTML forms use a per-session token compared with `hmac.compare_digest`. JSON batches use `X-CSRF-Token`; beacon delivery cannot set a header, so `/api/events/beacon` validates `Origin` or same-origin `Referer`, content type, size, and the normal event schema. Flash messages are small values stored and popped from the signed session, not a nonexistent middleware.
 
+### Optional Google sign-in
+
+Google sign-in is disabled by default. Enable it only after creating a Google Cloud OAuth client for a **Web application** and configuring the exact redirect URI:
+
+```text
+GOOGLE_AUTH_ENABLED=true
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=http://127.0.0.1:8001/auth/google/callback
+```
+
+The local `localhost` URI is distinct and must be registered separately if used. Production must use its exact HTTPS callback URI. A Google OAuth consent screen in testing mode may require the account to be added as a test user. SmartReco uses OpenID Connect authorization code flow with state, nonce, PKCE S256, discovery/JWKS verification, and the verified Google `sub` as the external identity key. Google-created accounts use the existing regular-user role (`USER`, the current MEMBER-equivalent), never `ADMIN`; password login remains available. Tokens are exchanged and verified server-side and are not stored.
+
 ## Behavioral tracking
 
 `static/js/tracker.js` queues page views, course views, impressions, clicks, filter changes, searches, and dwell events in memory. Every event has a stable UUID `event_id` and `schema_version: 1`; retries reuse the same object. Impressions require 55% visibility for one second and use a 15-minute `sessionStorage` suppression window. Course-detail dwell includes the course UUID, while visibility-aware dwell is capped at 30 minutes and emitted only once. The tracker batches at ten events, flushes every five seconds, caps the queue, uses `fetch(..., keepalive)` and best-effort `sendBeacon` on exit, and never calls Mesh, Qdrant, or recommendation code. The event API validates each event independently, inserts valid events in bulk-like savepoints, and returns accepted, duplicate, and rejected counts. Legacy clients may omit `event_id` during the transition; the server generates one, while the frontend always sends one.
@@ -122,7 +135,7 @@ Related cards use the existing batched tracker with `COURSE_IMPRESSION` and `COU
 
 Email delivery is opt-in. The console provider is the safe default; SMTP uses `EMAIL_PROVIDER=smtp` plus the documented SMTP settings. APScheduler queues one digest per user-local date, sends bounded batches, records attempts, and retries transient failures. LangSmith tracing is optional and disabled unless `LANGSMITH_TRACING=true` and a key are configured; recommendation generation does not fail when tracing is unavailable.
 
-Phase 2 configuration includes `MESH_BASE_URL`, `MESH_CHAT_MODEL`, `MESH_REQUEST_TIMEOUT_SECONDS`, `MESH_MAX_RETRIES`, `MESH_TOTAL_BUDGET_SECONDS` (default 70 seconds), `RECOMMENDATION_*`, `RELATED_COURSES_*`, `EMAIL_*`, `SMTP_*`, `APP_BASE_URL`, and optional `LANGSMITH_*` variables. The total Mesh budget covers the primary call and the single structured-output repair attempt. Provider failures fall back to deterministic copy with sanitized run errors; cancellation and unexpected failures finalize the owned run through a fresh session. `.env.example` contains placeholders only.
+Phase 2 configuration includes `MESH_BASE_URL`, `MESH_CHAT_MODEL`, `MESH_REQUEST_TIMEOUT_SECONDS`, `MESH_MAX_RETRIES`, `MESH_TOTAL_BUDGET_SECONDS` (default 70 seconds), `RECOMMENDATION_*`, `RELATED_COURSES_*`, `EMAIL_*`, `SMTP_*`, `APP_BASE_URL`, `GOOGLE_*`, and optional `LANGSMITH_*` variables. The total Mesh budget covers the primary call and the single structured-output repair attempt. Provider failures fall back to deterministic copy with sanitized run errors; cancellation and unexpected failures finalize the owned run through a fresh session. `.env.example` contains placeholders only.
 
 ## Phase 2 commands
 

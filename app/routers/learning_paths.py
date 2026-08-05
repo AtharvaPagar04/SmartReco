@@ -5,6 +5,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.csrf import validate_csrf_token
 from app.database import get_db
@@ -63,7 +64,7 @@ async def _parse_input(request: Request) -> LearningPathInput:
     return LearningPathInput.model_validate(_raw_form(await request.form()))
 
 
-def _context(request: Request, user: User | None, *, draft: dict | None = None, errors: list[str] | None = None, field_errors: dict[str, str] | None = None, active_step: int = 1):
+def _context(request: Request, user: User | None, *, draft: dict | None = None, errors: list[str] | None = None, field_errors: dict[str, str] | None = None, active_step: int = 1, saved_paths: list | None = None):
     draft = dict(draft or {})
     draft.setdefault("selected_domains", [value for value in [draft.get("primary_domain"), *(draft.get("secondary_domains") or [])] if value])
     review_values = {
@@ -74,15 +75,16 @@ def _context(request: Request, user: User | None, *, draft: dict | None = None, 
         "Learning preferences": ", ".join(PREFERENCES.get(item, item) for item in draft.get("learning_preferences", [])) or "Not selected",
         "Prior skills": ", ".join(PRIOR_SKILLS.get(item, item) for item in draft.get("prior_skills", [])) or "None",
         "Format preferences": ", ".join(FORMAT_PREFERENCES.get(item, item) for item in draft.get("format_preferences", [draft.get("format_preference")] if draft.get("format_preference") else [])) or "None",
-        "Path size": {"FOCUSED": "Focused path — 3 courses", "EXTENDED": "Extended path — 4 courses", "AUTO": "Let SmartReco decide — 3–4 courses"}.get(draft.get("path_length"), "Let SmartReco decide — 3–4 courses"),
+        "Path size": {"FOCUSED": "Focused path — 3–4 courses", "BALANCED": "Balanced path — 6–7 courses", "EXTENDED": "Deep path — 8 courses", "DEEP": "Deep path — 8 courses", "AUTO": "Let SmartReco decide — 3–8 courses"}.get(draft.get("path_length"), "Let SmartReco decide — 3–8 courses"),
     }
-    return dict(current_user=user, domain_options=DOMAIN_OPTIONS, domain_groups=tuple(dict.fromkeys(item.group for item in DOMAIN_OPTIONS)), goals=GOALS, levels=LEVELS, preferences=PREFERENCES, prior_skills=PRIOR_SKILLS, formats=FORMAT_PREFERENCES, path_lengths=PATH_LENGTHS, quick_instructions=QUICK_INSTRUCTIONS, draft=draft, review_values=review_values, errors=errors or [], field_errors=field_errors or {}, active_step=active_step, selection_limits={"domains": MAX_SELECTED_DOMAINS, "goals": MAX_LEARNING_GOALS, "learning_preferences": MAX_LEARNING_PREFERENCES, "prior_skills": MAX_PRIOR_SKILLS, "format_preferences": MAX_FORMAT_PREFERENCES, "quick_instructions": MAX_QUICK_INSTRUCTIONS})
+    return dict(current_user=user, domain_options=DOMAIN_OPTIONS, domain_groups=tuple(dict.fromkeys(item.group for item in DOMAIN_OPTIONS)), goals=GOALS, levels=LEVELS, preferences=PREFERENCES, prior_skills=PRIOR_SKILLS, formats=FORMAT_PREFERENCES, path_lengths=PATH_LENGTHS, quick_instructions=QUICK_INSTRUCTIONS, draft=draft, review_values=review_values, errors=errors or [], field_errors=field_errors or {}, active_step=active_step, selection_limits={"domains": MAX_SELECTED_DOMAINS, "goals": MAX_LEARNING_GOALS, "learning_preferences": MAX_LEARNING_PREFERENCES, "prior_skills": MAX_PRIOR_SKILLS, "format_preferences": MAX_FORMAT_PREFERENCES, "quick_instructions": MAX_QUICK_INSTRUCTIONS}, saved_paths=saved_paths or [])
 
 
 async def _invalid_page(request: Request, db: AsyncSession, user: User | None, error: ValidationError):
     field_errors = friendly_validation_errors(error)
     step = next((2 if field in {"goals"} else 3 if field in {"level", "prior_skills"} else 4 if field in {"learning_preferences", "format_preferences"} else 5 if field in {"weekly_hours", "target_weeks", "requested_course_count"} else 6 if field in {"optional_instruction", "quick_instructions"} else 1 for field in field_errors), 1)
-    return page(request, "path_builder/index.html", **_context(request, user, draft=_raw_form(await request.form()), errors=list(dict.fromkeys(field_errors.values())), field_errors=field_errors, active_step=step))
+    saved_paths = list((await db.scalars(select(LearningPath).options(selectinload(LearningPath.items)).where(LearningPath.user_id == user.id, LearningPath.status != "ARCHIVED").order_by(LearningPath.created_at.desc()))).all()) if user else []
+    return page(request, "path_builder/index.html", **_context(request, user, draft=_raw_form(await request.form()), errors=list(dict.fromkeys(field_errors.values())), field_errors=field_errors, active_step=step, saved_paths=saved_paths))
 
 
 async def _record_path_event(
@@ -119,14 +121,16 @@ async def _record_path_event(
 async def path_builder(request: Request, db: AsyncSession = Depends(get_db)):
     user = await current_user(request, db)
     draft = request.session.get("path_builder_draft", {})
-    return page(request, "path_builder/index.html", **_context(request, user, draft=draft))
+    saved_paths = list((await db.scalars(select(LearningPath).options(selectinload(LearningPath.items)).where(LearningPath.user_id == user.id, LearningPath.status != "ARCHIVED").order_by(LearningPath.created_at.desc()))).all()) if user else []
+    return page(request, "path_builder/index.html", **_context(request, user, draft=draft, saved_paths=saved_paths))
 
 
 @router.get("/path-builder/review")
 async def path_builder_review(request: Request, db: AsyncSession = Depends(get_db)):
     user = await current_user(request, db)
     draft = request.session.get("path_builder_draft", {})
-    return page(request, "path_builder/review.html", **_context(request, user, draft=draft))
+    saved_paths = list((await db.scalars(select(LearningPath).options(selectinload(LearningPath.items)).where(LearningPath.user_id == user.id, LearningPath.status != "ARCHIVED").order_by(LearningPath.created_at.desc()))).all()) if user else []
+    return page(request, "path_builder/review.html", **_context(request, user, draft=draft, saved_paths=saved_paths))
 
 
 @router.post("/path-builder/draft")
@@ -187,8 +191,7 @@ async def generate_path(request: Request, db: AsyncSession = Depends(get_db), cs
 
 @router.get("/learning-paths")
 async def learning_paths(request: Request, user: User = Depends(get_user), db: AsyncSession = Depends(get_db)):
-    paths = list((await db.scalars(select(LearningPath).where(LearningPath.user_id == user.id, LearningPath.status != "ARCHIVED").order_by(LearningPath.created_at.desc()))).all())
-    return page(request, "learning_paths/index.html", current_user=user, paths=paths)
+    return RedirectResponse("/path-builder", status_code=303)
 
 
 @router.get("/learning-paths/{path_id}")
@@ -245,7 +248,7 @@ async def archive_path(path_id: str, request: Request, user: User = Depends(get_
         course_count=len(path.items),
     )
     await db.commit()
-    return RedirectResponse("/learning-paths", status_code=303)
+    return RedirectResponse("/path-builder", status_code=303)
 
 
 @router.post("/learning-paths/{path_id}/items/{item_id}/replace")

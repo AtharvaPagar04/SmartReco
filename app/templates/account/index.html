@@ -1,16 +1,238 @@
 {% extends "base.html" %}
-{% block title %}Your account — SmartReco{% endblock %}
+{% block title %}Your Account — SmartReco{% endblock %}
 {% block content %}
-<section class="page-heading"><p class="eyebrow">Account</p><h1>{{ current_user.full_name }}</h1><p>{{ current_user.email }} · {{ current_user.role|title }}</p></section>
-<div class="stats-grid">
-  <div class="stat-card"><span>Courses viewed</span><strong>{{ activity.weekly.courses_viewed or 0 }}</strong><small>Last 7 days</small></div>
-  <div class="stat-card"><span>Searches made</span><strong>{{ activity.weekly.searches or 0 }}</strong><small>Last 7 days</small></div>
-  <div class="stat-card"><span>Focused learning</span><strong>{{ activity.weekly.dwell_minutes or 0 }} min</strong><small>Qualified dwell, last 7 days</small></div>
+<div class="account-page">
+  <!-- Profile Header Hero -->
+  <section class="account-profile-header">
+    <div class="profile-header-main">
+      <div class="profile-avatar">
+        <span>{{ current_user.full_name[:2]|upper }}</span>
+      </div>
+      <div class="profile-meta">
+        <div class="profile-title-row">
+          <h1>{{ current_user.full_name }}</h1>
+          <span class="badge role-badge">{{ current_user.role|title }}</span>
+        </div>
+        <p class="profile-subtitle">
+          {% if current_user.headline %}{{ current_user.headline }} · {% endif %}
+          {{ current_user.email }}
+          {% if current_user.location %} · 📍 {{ current_user.location }}{% endif %}
+        </p>
+        {% if current_user.bio %}
+          <p class="profile-bio">{{ current_user.bio }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="account-section panel auth-methods-panel" aria-labelledby="sign-in-methods-heading">
+    <p class="eyebrow">Security</p>
+    <h2 id="sign-in-methods-heading">Sign-in methods</h2>
+    <div class="auth-method-row"><span>Google</span><strong>{{ 'Connected' if google_identity else 'Not connected' }}</strong></div>
+    <div class="auth-method-row"><span>Password</span><strong>{{ 'Available' if current_user.password_hash else 'Not configured' }}</strong></div>
+  </section>
+
+  <!-- Personal Details & Profile Settings Section -->
+  <section class="account-section panel account-details-panel" aria-labelledby="personal-details-heading">
+    <div class="section-heading-row">
+      <div>
+        <p class="eyebrow">Personal Information</p>
+        <h2 id="personal-details-heading">Account & Profile Details</h2>
+        <p class="section-description">Manage your personal profile details and learning identity.</p>
+      </div>
+    </div>
+
+    <form class="account-profile-form" method="post" action="/account/profile">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="full_name">Full Name</label>
+          <input type="text" id="full_name" name="full_name" value="{{ current_user.full_name }}" required class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" value="{{ current_user.email }}" disabled class="form-input disabled-input">
+          <small class="form-hint">Email address is managed via authentication security.</small>
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="headline">Professional Headline</label>
+          <input type="text" id="headline" name="headline" value="{{ current_user.headline or '' }}" placeholder="e.g. Senior Machine Learning Engineer" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label for="primary_domain">Primary Learning Focus</label>
+          <input type="text" id="primary_domain" name="primary_domain" value="{{ current_user.primary_domain or '' }}" placeholder="e.g. Machine Learning & AI" class="form-input">
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="location">Location</label>
+          <input type="text" id="location" name="location" value="{{ current_user.location or '' }}" placeholder="e.g. San Francisco, CA" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label for="role_display">Account Role</label>
+          <input type="text" id="role_display" value="{{ current_user.role|title }}" disabled class="form-input disabled-input">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="bio">Bio & Learning Goals Summary</label>
+        <textarea id="bio" name="bio" rows="3" placeholder="Tell SmartReco about your background, career targets, or learning goals..." class="form-input form-textarea">{{ current_user.bio or '' }}</textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="button primary">Save Profile Changes</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Activity Stats Grid -->
+  <section class="account-section" aria-labelledby="stats-heading">
+    <div class="section-heading-row">
+      <div>
+        <p class="eyebrow">Activity & Engagement</p>
+        <h2 id="stats-heading">Weekly Learning Activity</h2>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">Courses viewed</span>
+        <strong class="stat-value">{{ activity.weekly.courses_viewed or 0 }}</strong>
+        <small class="stat-sub">Last 7 days</small>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Searches made</span>
+        <strong class="stat-value">{{ activity.weekly.searches or 0 }}</strong>
+        <small class="stat-sub">Last 7 days</small>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Focused learning</span>
+        <strong class="stat-value">{{ activity.weekly.dwell_minutes or 0 }} min</strong>
+        <small class="stat-sub">Qualified dwell, last 7 days</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- Course Enrollments & Progress Section -->
+  <section class="account-section panel courses-progress-panel" aria-labelledby="courses-progress-heading">
+    <div class="section-heading-row">
+      <div>
+        <p class="eyebrow">Your Learning Journey</p>
+        <h2 id="courses-progress-heading">Ongoing & Completed Courses</h2>
+        <p class="section-description">Track your active course enrollments and completed learning modules.</p>
+      </div>
+    </div>
+
+    {% if learning_context and (learning_context.enrolled or learning_context.completed) %}
+      <div class="courses-status-grid">
+        {% if learning_context.enrolled %}
+          <div class="status-group">
+            <h3 class="status-group-title">
+              <span class="status-indicator status-ongoing"></span>
+              Ongoing Courses ({{ learning_context.enrolled|length }})
+            </h3>
+            <div class="account-course-list">
+              {% for course in learning_context.enrolled %}
+                <div class="account-course-card in-progress">
+                  <div class="account-course-header">
+                    <span class="badge status-badge status-in-progress">In Progress</span>
+                    <span class="account-course-category">{{ course.category }}</span>
+                  </div>
+                  <h4 class="account-course-title">
+                    <a href="/courses/{{ course.slug }}">{{ course.title }}</a>
+                  </h4>
+                  <div class="account-course-footer">
+                    <span class="account-course-meta">{{ course.difficulty }}</span>
+                    <div class="account-course-actions">
+                      <a href="/courses/{{ course.slug }}" class="button primary text-sm">Continue &rarr;</a>
+                      <form method="post" action="/courses/{{ course.slug }}/complete" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="button secondary text-sm">Complete Course ✓</button>
+                      </form>
+                    </div>
+                  </div>
+
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if learning_context.completed %}
+          <div class="status-group">
+            <h3 class="status-group-title">
+              <span class="status-indicator status-completed"></span>
+              Completed Courses ({{ learning_context.completed|length }})
+            </h3>
+            <div class="account-course-list">
+              {% for course in learning_context.completed %}
+                <div class="account-course-card completed">
+                  <div class="account-course-header">
+                    <span class="badge status-badge status-done">Completed ✓</span>
+                    <span class="account-course-category">{{ course.category }}</span>
+                  </div>
+                  <h4 class="account-course-title">
+                    <a href="/courses/{{ course.slug }}">{{ course.title }}</a>
+                  </h4>
+                  <div class="account-course-footer">
+                    <span class="account-course-meta">{{ course.difficulty }}</span>
+                    <a href="/courses/{{ course.slug }}" class="button secondary text-sm">Review Course</a>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="empty-courses-card">
+        <p class="muted">You haven't started or completed any courses yet.</p>
+        <a href="/courses" class="button primary">Browse Course Catalog &rarr;</a>
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- Skills Inventory Section -->
+  <section class="account-section panel skills-inventory-panel" aria-labelledby="skills-heading">
+    <div class="section-heading-row">
+      <div>
+        <p class="eyebrow">Mastery & Qualifications</p>
+        <h2 id="skills-heading">Skills Acquired</h2>
+        <p class="section-description">Verified technical skills and tools earned through your completed courses.</p>
+      </div>
+    </div>
+
+    {% if learning_context and learning_context.completed_skills %}
+      <div class="skills-grid">
+        {% for skill in learning_context.completed_skills %}
+          <div class="skill-badge-pill">
+            <svg class="skill-check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span class="skill-name">{{ skill }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-skills-card">
+        <p class="muted">Complete courses to earn skills and build your verified skill inventory.</p>
+        {% if learning_context and learning_context.enrolled %}
+          <a href="/courses/{{ learning_context.enrolled[0].slug }}" class="button secondary">Finish {{ learning_context.enrolled[0].title }} &rarr;</a>
+        {% else %}
+          <a href="/courses" class="button secondary">Explore Courses to Earn Skills</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+
+  <p class="muted activity-footer-timestamp">Last active: {{ activity.last_active_at.strftime('%b %d, %Y %H:%M UTC') if activity.last_active_at else 'Not yet recorded' }}</p>
 </div>
-<div class="detail-grid">
-  <section class="panel"><h2>Recently viewed courses</h2>{% if activity.recently_viewed_courses %}<div class="activity-list">{% for course in activity.recently_viewed_courses %}<div><strong>{% if course.is_active %}<a href="/courses/{{ course.slug }}">{{ course.title }}</a>{% else %}{{ course.title }}{% endif %}</strong><span>{{ course.category }}{% if course.dwell_minutes %} · {{ course.dwell_minutes }} min focused{% endif %}</span><time>{{ course.last_viewed_at.strftime('%b %d, %Y %H:%M') }}</time></div>{% endfor %}</div>{% else %}<p class="muted">Your course activity will appear here.</p>{% endif %}</section>
-  <section class="panel"><h2>Recent searches</h2>{% if activity.recent_searches %}<div class="tag-row">{% for item in activity.recent_searches %}<span>{{ item.query }}</span>{% endfor %}</div>{% else %}<p class="muted">Searches you make will appear here.</p>{% endif %}<h2 class="subheading">Categories you explored</h2>{% if activity.categories_explored %}<div class="tag-row">{% for item in activity.categories_explored %}<span>{{ item.category }} · {{ item.count }}</span>{% endfor %}</div>{% else %}<p class="muted">Explore a course to build this list.</p>{% endif %}</section>
-</div>
-<p class="muted">Last active: {{ activity.last_active_at.strftime('%b %d, %Y %H:%M UTC') if activity.last_active_at else 'Not yet recorded' }}</p>
-<section class="panel recommendation-panel"><p class="eyebrow">Based on your recent course activity</p>{% if recommendation %}<h2>{{ recommendation['headline'] }}</h2><p>{{ recommendation['narrative'] }}</p><a class="button" href="/recommendations">View learning path</a>{% else %}<h2>Build your learning signals</h2><p>Explore a few courses or try a search, and SmartReco will use those signals to tailor this section.</p><a class="button secondary" href="/courses">Browse courses</a>{% endif %}</section>
+
 {% endblock %}

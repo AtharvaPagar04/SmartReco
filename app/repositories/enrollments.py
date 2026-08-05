@@ -26,3 +26,9 @@ async def enrollment_for_user(db: AsyncSession, user_id: str, course_id: str) ->
 
 def touch_enrollment(enrollment: Enrollment, now: datetime) -> None:
     enrollment.last_accessed_at = now
+
+
+def complete_enrollment(enrollment: Enrollment, now: datetime) -> None:
+    enrollment.status = "COMPLETED"
+    enrollment.completed_at = now
+    enrollment.last_accessed_at = now

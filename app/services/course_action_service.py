@@ -36,7 +36,8 @@ def action_for_course(course: Course, *, authenticated: bool, in_cart: bool = Fa
     if enrollment and (enrollment.completed_at or enrollment.status == "COMPLETED"):
         return CourseActionState("COMPLETED", "Review course", f"/courses/{course.slug}", "GET", is_entitled=entitled, is_enrolled=True)
     if enrollment:
-        return CourseActionState("IN_PROGRESS", "Continue course", f"/courses/{course.slug}", "GET", is_entitled=entitled, is_enrolled=True)
+        return CourseActionState("IN_PROGRESS", "Continue course", f"/courses/{course.slug}", "GET", "Complete course", f"/courses/{course.slug}/complete", "POST", is_entitled=entitled, is_enrolled=True)
+
     if entitled:
         return CourseActionState("PURCHASED", "Start course", f"/courses/{course.slug}/enroll", "POST", is_entitled=True)
     if course.price <= 0:

@@ -1,6 +1,40 @@
 {% extends "base.html" %}
 {% block title %}Checkout — SmartReco{% endblock %}
 {% block content %}
-<section class="page-heading"><p class="eyebrow">Demo checkout</p><h1>Confirm your purchase</h1><p class="lede">This demo mode does not process real money or collect card details.</p></section>
-<section class="panel"><ul>{% for item in order.items %}<li>{{ item.course_title_snapshot }} — {{ item.currency }} {{ '%.2f'|format(item.unit_price_snapshot) }}</li>{% endfor %}</ul><h2>{{ order.currency }} {{ '%.2f'|format(order.total) }}</h2><form method="post" action="/checkout/{{ order.id }}/complete"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button" type="submit">Complete demo purchase</button></form><form method="post" action="/checkout/{{ order.id }}/cancel"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button secondary" type="submit">Cancel</button></form></section>
+<section class="page-heading">
+  <p class="eyebrow">Demo checkout</p>
+  <h1>Confirm your purchase</h1>
+  <p class="lede">This demo mode instantly grants full access to your selected courses without processing real payments.</p>
+</section>
+
+<div class="checkout-grid">
+  <div class="checkout-order-card">
+    <h2>Course Items</h2>
+    <div class="checkout-items-list">
+      {% for item in order.items %}
+      <div class="checkout-item-row">
+        <div>
+          <h3>{{ item.course_title_snapshot }}</h3>
+          <span class="checkout-item-type">Full Lifetime Access</span>
+        </div>
+        <span class="checkout-item-price">{{ item.currency }} {{ '%.2f'|format(item.unit_price_snapshot) }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="checkout-total-row">
+      <span>Total Amount</span>
+      <strong>{{ order.currency }} {{ '%.2f'|format(order.total) }}</strong>
+    </div>
+    <div class="checkout-actions">
+      <form method="post" action="/checkout/{{ order.id }}/complete" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="button primary large" type="submit">Complete demo purchase</button>
+      </form>
+      <form method="post" action="/checkout/{{ order.id }}/cancel" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="button secondary" type="submit">Cancel</button>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}

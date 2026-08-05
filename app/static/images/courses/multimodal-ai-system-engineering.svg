@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a103c"/>
+      <stop offset="100%" stop-color="#2b1b54"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.03"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="15" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="450" fill="url(#bgGrad)"/>
+  
+  <!-- Grid Lines -->
+  <g stroke="#ffffff" stroke-opacity="0.05" stroke-width="1">
+    <line x1="0" y1="90" x2="800" y2="90"/>
+    <line x1="0" y1="180" x2="800" y2="180"/>
+    <line x1="0" y1="270" x2="800" y2="270"/>
+    <line x1="0" y1="360" x2="800" y2="360"/>
+    <line x1="200" y1="0" x2="200" y2="450"/>
+    <line x1="400" y1="0" x2="400" y2="450"/>
+    <line x1="600" y1="0" x2="600" y2="450"/>
+  </g>
+
+  <!-- Glowing Orbs -->
+  <circle cx="650" cy="120" r="180" fill="#8a2be2" opacity="0.25" filter="url(#glow)"/>
+  <circle cx="150" cy="380" r="140" fill="#c084fc" opacity="0.15" filter="url(#glow)"/>
+
+  <!-- Visual Graphic Box -->
+  <g transform="translate(380, 40)">
+    <rect x="0" y="0" width="360" height="240" rx="20" fill="url(#cardGrad)" stroke="#ffffff" stroke-opacity="0.2" stroke-width="1.5"/>
+    <g transform="translate(-20, 0)">
+      
+            <circle cx="130" cy="80" r="22" fill="#38bdf8" fill-opacity="0.25" stroke="#38bdf8" stroke-width="2"/>
+            <text x="120" y="85" font-family="Inter, sans-serif" font-size="14" fill="#38bdf8">👁️</text>
+            <circle cx="130" cy="160" r="22" fill="#ec4899" fill-opacity="0.25" stroke="#ec4899" stroke-width="2"/>
+            <text x="120" y="165" font-family="Inter, sans-serif" font-size="14" fill="#ec4899">🎙️</text>
+            <path d="M 155,80 L 210,120 M 155,160 L 210,120" stroke="#c084fc" stroke-width="3"/>
+            <circle cx="235" cy="120" r="30" fill="#8a2be2" fill-opacity="0.4" stroke="#c084fc" stroke-width="3"/>
+            <text x="215" y="125" font-family="Inter, sans-serif" font-size="12" font-weight="800" fill="#ffffff">FUSION</text>
+        
+    </g>
+  </g>
+
+  <!-- Content Glass Panel -->
+  <rect x="50" y="50" width="480" height="350" rx="24" fill="#0d1512" fill-opacity="0.65" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1.5"/>
+
+  <!-- Text Content -->
+  <g transform="translate(85, 95)">
+    <!-- Category Pill -->
+    <rect x="0" y="0" width="253" height="28" rx="14" fill="#8a2be2" fill-opacity="0.3" stroke="#c084fc" stroke-opacity="0.6" stroke-width="1"/>
+    <text x="12" y="18" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="800" fill="#c084fc" letter-spacing="1.5">ARTIFICIAL INTELLIGENCE</text>
+
+    <!-- Title -->
+    <text x="0" y="75" font-family="Inter, system-ui, sans-serif" font-size="26" font-weight="900" fill="#ffffff" letter-spacing="-0.5">Multimodal AI System Engineering</text>
+
+    <!-- Tagline -->
+    <text x="0" y="155" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" fill="#a0aec0">
+      Vision, Speech &amp; Audio Fusion
+    </text>
+
+    <!-- Badges -->
+    <g transform="translate(0, 195)">
+      <rect x="0" y="0" width="110" height="32" rx="8" fill="#ffffff" fill-opacity="0.08" stroke="#ffffff" stroke-opacity="0.15"/>
+      <text x="14" y="21" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="#ffffff">SmartReco</text>
+
+      <rect x="122" y="0" width="140" height="32" rx="8" fill="#8a2be2" fill-opacity="0.25"/>
+      <text x="134" y="21" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="#c084fc">★ Verified Course</text>
+    </g>
+  </g>
+</svg>

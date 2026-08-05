@@ -71,7 +71,7 @@ PRIOR_SKILLS = {"PYTHON": "Python", "SQL": "SQL", "GIT": "Git", "APIS": "APIs", 
 FORMAT_PREFERENCES = {"READING": "Reading", "PRACTICE": "Practice exercises", "PROJECTS": "Projects", "REVIEWS": "Reviews", "MIXED": "Mixed format"}
 QUICK_INSTRUCTIONS = {"free": "Prefer free courses", "projects": "Prefer practical projects", "math": "Avoid advanced math", "production": "Focus on production skills", "interviews": "Include interview preparation", "short": "Keep the path short"}
 BUDGET_TYPES = {"FREE": Decimal("0"), "UNDER_50": Decimal("50"), "UNDER_100": Decimal("100"), "UNDER_200": Decimal("200"), "FLEXIBLE": None, "CUSTOM": None}
-PATH_LENGTHS = {"FOCUSED": (3, 3), "EXTENDED": (4, 4), "AUTO": (3, 4)}
+PATH_LENGTHS = {"FOCUSED": (3, 4), "BALANCED": (6, 7), "EXTENDED": (8, 8), "DEEP": (8, 8), "AUTO": (3, 8)}
 
 
 class LearningPathInput(BaseModel):
@@ -90,7 +90,7 @@ class LearningPathInput(BaseModel):
     budget_scope: Literal["PATH", "COURSE"] = "PATH"
     budget_amount: Decimal | None = Field(default=None, ge=0)
     currency: str = Field(default="USD", min_length=3, max_length=3)
-    path_length: Literal["FOCUSED", "EXTENDED", "AUTO"] = "AUTO"
+    path_length: Literal["FOCUSED", "BALANCED", "EXTENDED", "DEEP", "AUTO"] = "AUTO"
     requested_course_count: int = Field(default=4, ge=MIN_PATH_COURSES, le=MAX_PATH_COURSES)
     optional_instruction: str = Field(default="", max_length=500)
     quick_instructions: list[str] = Field(default_factory=list, max_length=MAX_QUICK_INSTRUCTIONS)
@@ -108,10 +108,10 @@ class LearningPathInput(BaseModel):
         else:
             values.pop("format_preference", None)
         legacy_path = values.get("path_length")
-        if legacy_path in {"QUICK", "STANDARD", "DEEP"}:
-            values["path_length"] = "FOCUSED" if legacy_path == "QUICK" else "EXTENDED"
+        if legacy_path in {"QUICK", "STANDARD"}:
+            values["path_length"] = "FOCUSED" if legacy_path == "QUICK" else "BALANCED"
         if "requested_course_count" not in values:
-            values["requested_course_count"] = 3 if values.get("path_length") == "FOCUSED" else 4
+            values["requested_course_count"] = 4 if values.get("path_length") == "FOCUSED" else 7 if values.get("path_length") == "BALANCED" else 8 if values.get("path_length") in {"EXTENDED", "DEEP"} else 4
         if "selected_domains" in values:
             selected = [item for item in values.pop("selected_domains") if item]
             if not values.get("primary_domain"):

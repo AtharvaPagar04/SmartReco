@@ -49,3 +49,9 @@
 - Rejection feedback updates the bounded interest profile and deterministic rank adjustments, while the current view filters the rejected course immediately.
 - A feedback replacement preserves the other visible recommendations and selects one active, unowned SQL candidate with deterministic grounded copy; historical runs remain intact for diagnostics.
 - Mesh receives only bounded preference summaries and no optional comments or raw event history.
+
+### Phase 6: Google OIDC authentication (Completed)
+- Added optional server-side Google authorization-code login with state, nonce, PKCE S256, exact configured redirect URI, discovery metadata, rotating JWKS, and verified ID-token claims.
+- Added provider-independent `external_identities` keyed by `(provider, provider_subject)` and linked existing normalized-email regular users without duplicating their carts, enrollments, recommendations, events, or learning paths.
+- Google-created users use the existing `USER` role, nullable password hashes, and the normal SmartReco session; admin accounts remain password-authenticated.
+- Added migration `0010_google_external_identities`, login/registration/account UI, sanitized auth events, and mocked-provider coverage without changing recommendation, commerce, enrollment, Mesh, or Qdrant flows.

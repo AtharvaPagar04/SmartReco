@@ -18,8 +18,7 @@
           <strong class="handle-text">Recently viewed courses</strong>
         </div>
         <div class="activity-header-actions">
-          <button type="button" class="activity-action-btn" id="activity-minimize-btn" title="Minimize / Expand" aria-label="Minimize">—</button>
-          <button type="button" class="activity-action-btn" id="activity-close-btn" title="Hide floating widget" aria-label="Close">✕</button>
+          <button type="button" class="activity-action-btn" id="activity-close-btn" title="Close activity feed" aria-label="Close">✕</button>
         </div>
       </div>
       <div class="activity-widget-body" id="activity-widget-body">
@@ -42,7 +41,6 @@
     document.body.appendChild(launcher);
 
     const dragHandle = document.getElementById('activity-drag-handle');
-    const minimizeBtn = document.getElementById('activity-minimize-btn');
     const closeBtn = document.getElementById('activity-close-btn');
     const widgetBody = document.getElementById('activity-widget-body');
     const listContainer = document.getElementById('activity-widget-list');
@@ -51,7 +49,7 @@
     // State persistence keys
     const POS_KEY = 'smartreco_activity_pos';
     const SIZE_KEY = 'smartreco_activity_size';
-    const STATE_KEY = 'smartreco_activity_state'; // 'expanded', 'minimized', 'closed'
+    const STATE_KEY = 'smartreco_activity_state'; // 'open', 'closed'
 
     // Load saved position
     const savedPos = localStorage.getItem(POS_KEY);
@@ -81,15 +79,14 @@
       } catch (e) {}
     }
 
-    // Load saved minimized / closed state
+    // Load saved closed state
     const savedState = localStorage.getItem(STATE_KEY);
-    if (savedState === 'minimized') {
-      widget.classList.add('is-minimized');
-      minimizeBtn.textContent = '□';
-      minimizeBtn.title = 'Expand';
-    } else if (savedState === 'closed') {
+    if (savedState === 'closed') {
       widget.style.display = 'none';
       launcher.style.display = 'inline-flex';
+    } else {
+      widget.style.display = 'flex';
+      launcher.style.display = 'none';
     }
 
     // 1. DRAGGING LOGIC
@@ -213,14 +210,7 @@
     resizeHandle.addEventListener('mousedown', onResizeStart);
     resizeHandle.addEventListener('touchstart', onResizeStart, { passive: false });
 
-    // 3. MINIMIZE / CLOSE LOGIC
-    minimizeBtn.addEventListener('click', () => {
-      const isMin = widget.classList.toggle('is-minimized');
-      minimizeBtn.textContent = isMin ? '□' : '—';
-      minimizeBtn.title = isMin ? 'Expand' : 'Minimize';
-      localStorage.setItem(STATE_KEY, isMin ? 'minimized' : 'expanded');
-    });
-
+    // 3. SHOW / CLOSE LOGIC
     closeBtn.addEventListener('click', () => {
       widget.style.display = 'none';
       launcher.style.display = 'inline-flex';
@@ -230,8 +220,9 @@
     launcher.addEventListener('click', () => {
       launcher.style.display = 'none';
       widget.style.display = 'flex';
-      localStorage.setItem(STATE_KEY, widget.classList.contains('is-minimized') ? 'minimized' : 'expanded');
+      localStorage.setItem(STATE_KEY, 'open');
     });
+
 
     // 4. REAL-TIME DATA FETCHING & RENDERING
     function escapeHtml(str) {

@@ -15,8 +15,8 @@ async def test_seed_script_idempotency(db_session):
         courses_count_1 = await session.scalar(select(func.count(Course.id)))
         outbox_count_1 = await session.scalar(select(func.count(VectorOutbox.id)))
 
-    assert courses_count_1 == 30
-    assert outbox_count_1 == 30
+    assert courses_count_1 == 60
+    assert outbox_count_1 == 60
 
     # Second seed run (without reset)
     await seed_main(reset=False)
@@ -31,8 +31,8 @@ async def test_seed_script_idempotency(db_session):
 
 
 def test_seed_definitions_are_explicit_and_valid():
-    assert len(SEED_COURSES) == 30
-    assert len({item["slug"] for item in SEED_COURSES}) == 30
+    assert len(SEED_COURSES) == 60
+    assert len({item["slug"] for item in SEED_COURSES}) == 60
     assert all(item["tags"] and all(tag == tag.strip().lower() for tag in item["tags"]) for item in SEED_COURSES)
     mapping = {item["title"]: item["category"] for item in SEED_COURSES}
     assert mapping["TypeScript for Backend Teams"] == "Web Development"

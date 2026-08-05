@@ -22,113 +22,92 @@
     </div>
   </header>
 
-  {% if recommendation and (context["enrolled"] or context["completed"] or context["recently_explored"]) %}
+  {% if recommendation %}
     <section class="recommendation-section learning-context-panel" aria-labelledby="learning-context-title">
       <div class="section-heading learning-context-panel__header">
         <div>
           <p class="section-eyebrow">Learning context</p>
           <h2 id="learning-context-title">Your current learning context</h2>
-          <p class="section-description">SmartReco uses these learning signals to shape your next steps.</p>
+          <p class="section-description">Courses you are registered for or have completed shape your personalized learning path.</p>
         </div>
       </div>
 
-      <div class="learning-context-grid">
-        {% if context["enrolled"] %}
-          <div class="learning-context-group">
-            <div class="learning-context-group__heading">
-              <span class="context-icon" aria-hidden="true">01</span>
-              <h3>Currently learning</h3>
-            </div>
-            <ul class="context-course-list">
-              {% for course in context["enrolled"] %}
-                <li><a href="/courses/{{ course['slug'] }}">{{ course["title"] }}</a></li>
-              {% endfor %}
-            </ul>
-          </div>
-        {% endif %}
+      {% set has_activity = context["enrolled"] or context["completed"] or context["ready_to_start"] %}
 
-        {% if context["completed"] %}
-          <div class="learning-context-group">
-            <div class="learning-context-group__heading">
-              <span class="context-icon" aria-hidden="true">02</span>
-              <h3>Completed</h3>
-            </div>
-            <ul class="context-course-list">
-              {% for course in context["completed"] %}
-                <li><a href="/courses/{{ course['slug'] }}">{{ course["title"] }}</a></li>
-              {% endfor %}
-            </ul>
-          </div>
-        {% endif %}
+      {% if has_activity %}
+        <div class="continue-learning-grid learning-context-cards-grid">
+          {% for course in context["enrolled"] %}
+            <article class="learning-context-card enrolled-card course-card">
+              <div class="context-card-header">
+                <span class="context-status-pill in-progress">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  In Progress
+                </span>
+                <span class="category-pill">{{ course["category"] }}</span>
+              </div>
+              <h3 class="context-card-title"><a href="/courses/{{ course['slug'] }}">{{ course["title"] }}</a></h3>
+              <div class="context-card-footer">
+                {% if course["difficulty"] %}
+                  <span class="difficulty-tag">{{ course["difficulty"] }}</span>
+                {% endif %}
+                <a class="button primary small" href="/courses/{{ course['slug'] }}">Continue course &rarr;</a>
+              </div>
+            </article>
+          {% endfor %}
 
-        {% if context["recently_explored"] %}
-          <div class="learning-context-group">
-            <div class="learning-context-group__heading">
-              <span class="context-icon" aria-hidden="true">03</span>
-              <h3>Recently explored</h3>
-            </div>
-            <ul class="context-course-list">
-              {% for course in context["recently_explored"] %}
-                <li><a href="/courses/{{ course['slug'] }}">{{ course["title"] }}</a></li>
-              {% endfor %}
-            </ul>
-          </div>
-        {% endif %}
-      </div>
-    </section>
-  {% endif %}
+          {% for course in context["completed"] %}
+            <article class="learning-context-card completed-card course-card">
+              <div class="context-card-header">
+                <span class="context-status-pill completed">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  Completed
+                </span>
+                <span class="category-pill">{{ course["category"] }}</span>
+              </div>
+              <h3 class="context-card-title"><a href="/courses/{{ course['slug'] }}">{{ course["title"] }}</a></h3>
+              <div class="context-card-footer">
+                {% if course["difficulty"] %}
+                  <span class="difficulty-tag">{{ course["difficulty"] }}</span>
+                {% endif %}
+                <a class="button secondary small" href="/courses/{{ course['slug'] }}">Review course</a>
+              </div>
+            </article>
+          {% endfor %}
 
-  {% if context["enrolled"] %}
-    <section class="recommendation-section" aria-labelledby="continue-learning-heading">
-      <div class="section-heading">
-        <div>
-          <p class="section-eyebrow">Keep your momentum</p>
-          <h2 id="continue-learning-heading">Continue learning</h2>
-          <p class="section-description">Pick up where you left off.</p>
+          {% for course in context["ready_to_start"] %}
+            <article class="learning-context-card ready-card course-card">
+              <div class="context-card-header">
+                <span class="context-status-pill ready">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                  Purchased
+                </span>
+                <span class="category-pill">{{ course["category"] }}</span>
+              </div>
+              <h3 class="context-card-title"><a href="/courses/{{ course['slug'] }}">{{ course["title"] }}</a></h3>
+              <div class="context-card-footer">
+                {% if course["difficulty"] %}
+                  <span class="difficulty-tag">{{ course["difficulty"] }}</span>
+                {% endif %}
+                <a class="button primary small" href="/courses/{{ course['slug'] }}">Start course &rarr;</a>
+              </div>
+            </article>
+          {% endfor %}
         </div>
-      </div>
-
-      <div class="continue-learning-grid">
-        {% for course in context["enrolled"] %}
-          <article class="continue-learning-card course-card">
-            <div class="continue-learning-card__content">
-              <p class="eyebrow">{{ course["category"] }}</p>
-              <h3><a href="/courses/{{ course['slug'] }}">{{ course["title"] }}</a></h3>
-              <p class="course-status">In progress</p>
-            </div>
-            <div class="continue-learning-card__actions">
-              <a class="button" href="/courses/{{ course['slug'] }}">Continue course</a>
-            </div>
-          </article>
-        {% endfor %}
-      </div>
-    </section>
-  {% endif %}
-
-  {% if context["ready_to_start"] %}
-    <section class="recommendation-section" aria-labelledby="ready-to-start-heading">
-      <div class="section-heading">
-        <div>
-          <p class="section-eyebrow">You already have access</p>
-          <h2 id="ready-to-start-heading">Ready to start</h2>
-          <p class="section-description">Courses you own, waiting to be started.</p>
+      {% else %}
+        <div class="learning-context-empty">
+          <div class="empty-context-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          </div>
+          <div class="empty-context-text">
+            <h3>No registered or completed courses yet</h3>
+            <p>Enroll in a course or build a custom learning path to establish your active learning profile and shape recommendations.</p>
+          </div>
+          <div class="empty-context-actions">
+            <a class="button primary small" href="/courses">Browse catalog</a>
+            <a class="button secondary small" href="/path-builder">Build a path</a>
+          </div>
         </div>
-      </div>
-
-      <div class="continue-learning-grid ready-to-start-grid">
-        {% for course in context["ready_to_start"] %}
-          <article class="continue-learning-card course-card">
-            <div class="continue-learning-card__content">
-              <p class="eyebrow">{{ course["category"] }}</p>
-              <h3><a href="/courses/{{ course['slug'] }}">{{ course["title"] }}</a></h3>
-              <p class="course-status">Purchased and ready</p>
-            </div>
-            <div class="continue-learning-card__actions">
-              <a class="button" href="/courses/{{ course['slug'] }}">Start course</a>
-            </div>
-          </article>
-        {% endfor %}
-      </div>
+      {% endif %}
     </section>
   {% endif %}
 

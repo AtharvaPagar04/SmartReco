@@ -63,10 +63,11 @@ class Settings(BaseSettings):
     learning_path_chat_model: str = ""
     learning_path_prompt_version: str = "1"
     learning_path_max_candidates: int = 16
-    learning_path_max_courses: int = 4
+    learning_path_max_courses: int = 8
     langsmith_tracing: bool = False
     langsmith_api_key: str = ""
     langsmith_project: str = "smartreco"
+    langsmith_endpoint: str = "https://api.smith.langchain.com"
     email_provider: str = "console"
     email_from_address: str = ""
     email_from_name: str = "SmartReco"
@@ -76,6 +77,13 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_use_tls: bool = True
     app_base_url: str = "http://127.0.0.1:8001"
+    google_auth_enabled: bool = False
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "http://127.0.0.1:8001/auth/google/callback"
+    google_oidc_discovery_url: str = "https://accounts.google.com/.well-known/openid-configuration"
+    google_oauth_state_ttl_seconds: int = 600
+    google_request_timeout_seconds: int = 10
     app_timezone: str = "UTC"
     payments_enabled: bool = True
     payments_mode: str = "demo"
@@ -107,6 +115,11 @@ class Settings(BaseSettings):
             raise ValueError("Invalid vector or event limits")
         if self.payments_mode != "demo":
             raise ValueError("Only demo payments are enabled in this phase")
+        if self.google_auth_enabled:
+            if not self.google_client_id or not self.google_client_secret or not self.google_redirect_uri:
+                raise ValueError("Google auth requires GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI")
+            if not self.google_redirect_uri.startswith(("http://", "https://")):
+                raise ValueError("GOOGLE_REDIRECT_URI must be an absolute HTTP(S) URL")
 
 
 @lru_cache

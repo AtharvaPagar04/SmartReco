@@ -16,7 +16,7 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, hashed: str) -> bool:
-    return password_hash.verify(password, hashed)
+    return bool(hashed) and password_hash.verify(password, hashed)
 
 
 def normalize_email(email: str) -> str:
@@ -26,7 +26,12 @@ def normalize_email(email: str) -> str:
 def safe_next(value: str | None) -> str:
     if not value:
         return "/"
-    parsed = urlsplit(value)
+    if any(ord(character) < 32 or ord(character) == 127 for character in value):
+        return "/"
+    try:
+        parsed = urlsplit(value)
+    except ValueError:
+        return "/"
     return value if not parsed.scheme and not parsed.netloc and value.startswith("/") else "/"
 
 
@@ -40,12 +45,12 @@ async def current_user(request: Request, db: AsyncSession) -> User | None:
     return user
 
 
-def authenticate_session(request: Request, user: User) -> None:
+def authenticate_session(request: Request, user: User, *, authentication_method: str = "LOCAL_PASSWORD") -> None:
     csrf = request.session.get("csrf_token")
     session_id = request.session.get("session_id")
     path_builder_draft = request.session.get("path_builder_draft")
     request.session.clear()
-    request.session.update({"user_id": user.id, "session_id": session_id, "auth_at": datetime.now(timezone.utc).isoformat()})
+    request.session.update({"user_id": user.id, "session_id": session_id, "auth_at": datetime.now(timezone.utc).isoformat(), "auth_method": authentication_method})
     if csrf:
         request.session["csrf_token"] = csrf
     if path_builder_draft:

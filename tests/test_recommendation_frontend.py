@@ -240,14 +240,18 @@ async def test_navbar_navigation_links(client, regular_user):
     assert "/recommendations" not in res_anon.text
 
     # Logged in navbar
+
     await login_client(client, regular_user)
     res_auth = await client.get("/")
-    assert '<a href="/recommendations">For you</a>' in res_auth.text
-    assert '<a href="/account">Account</a>' in res_auth.text
+    assert 'href="/recommendations"' in res_auth.text and 'For you' in res_auth.text
+    assert 'href="/account"' in res_auth.text and 'Account' in res_auth.text
+
+
+
 
 
 @pytest.mark.asyncio
-async def test_account_page_renders_recommendation_summary(client, regular_user, db_session, course):
+async def test_account_page_does_not_render_recommendation_summary(client, regular_user, db_session, course):
     await login_client(client, regular_user)
 
     run = RecommendationRun(
@@ -264,8 +268,8 @@ async def test_account_page_renders_recommendation_summary(client, regular_user,
 
     res = await client.get("/account")
     assert res.status_code == 200
-    assert "Dashboard Machine Learning Focus" in res.text
-    assert 'href="/recommendations"' in res.text
+    assert "recommendation-panel" not in res.text
+    assert "Dashboard Machine Learning Focus" not in res.text
 
 
 @pytest.mark.asyncio

@@ -86,13 +86,27 @@ def _eligible(course: Course, path_input: LearningPathInput, excluded: set[str],
 
 def _path_bounds(path_input: LearningPathInput) -> tuple[int, int]:
     if path_input.path_length == "FOCUSED":
-        target = MIN_PATH_COURSES
-    elif path_input.path_length == "EXTENDED":
-        target = MAX_PATH_COURSES
+        target_min, target_max = 3, 4
+    elif path_input.path_length == "BALANCED":
+        target_min, target_max = 6, 7
+    elif path_input.path_length in ("EXTENDED", "DEEP"):
+        target_min, target_max = 8, 8
     else:
-        target = MIN_PATH_COURSES if path_input.requested_course_count == MIN_PATH_COURSES or (path_input.target_weeks and path_input.target_weeks <= 4) or path_input.weekly_hours < 2 else MAX_PATH_COURSES
-    target = min(target, settings.learning_path_max_courses, MAX_PATH_COURSES)
-    return target, target
+        if path_input.requested_course_count in (3, 4):
+            target_min, target_max = 3, 4
+        elif path_input.requested_course_count in (6, 7):
+            target_min, target_max = 6, 7
+        elif path_input.requested_course_count >= 8:
+            target_min, target_max = 8, 8
+        elif (path_input.target_weeks and path_input.target_weeks <= 4) or path_input.weekly_hours < 5:
+            target_min, target_max = 3, 4
+        elif (path_input.target_weeks and path_input.target_weeks >= 12) or path_input.weekly_hours >= 15:
+            target_min, target_max = 6, 8
+        else:
+            target_min, target_max = 3, 8
+    target_max = min(target_max, settings.learning_path_max_courses, MAX_PATH_COURSES)
+    target_min = min(target_min, target_max)
+    return target_min, target_max
 
 
 def _select_courses(candidates: list[RecommendationCandidate], path_input: LearningPathInput, profile: dict) -> list[Course]:
@@ -112,7 +126,6 @@ def _select_courses(candidates: list[RecommendationCandidate], path_input: Learn
         total += Decimal(str(course.price))
         if len(chosen) == target:
             break
-    # Keep a short path useful when the catalog cannot satisfy the requested length.
     if len(chosen) < minimum:
         return chosen
     return chosen[:maximum]

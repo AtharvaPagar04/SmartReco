@@ -807,6 +807,1959 @@ COURSE_DETAILS = {
                 "answer": "The course focuses primarily on application-layer security: inputs, outputs, tool safety, and data privacy."
             }
         ]
+    },
+    "autonomous-agent-evaluation-and-red-teaming": {
+        "what_you_will_learn": [
+            "Construct adversarial test suites for goal-driven AI agents",
+            "Identify tool abuse vectors, prompt leakage, and decision loops",
+            "Benchmark agent task completion safety using custom evaluators",
+            "Implement automated regression testing for agent policy changes",
+            "Establish red teaming playbooks for autonomous system rollouts"
+        ],
+        "prerequisites": [
+            "Understanding of AI agent architectures and tool calling",
+            "Intermediate Python and Pytest experience"
+        ],
+        "target_audience": [
+            "AI Safety Engineers auditing autonomous agent deployments",
+            "Backend Engineers building mission-critical agent workflows"
+        ],
+        "tools_used": ["Python 3.11", "Pytest", "DeepEval", "Ragas", "LangChain"],
+        "estimated_effort": "4 hours total (2 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Agent Threat Vectors & Adversarial Testing",
+                "description": "Deconstruct failure modes, infinite loops, and unintended tool calls.",
+                "lessons": [
+                    {
+                        "title": "Adversarial Prompting & Privilege Escalation",
+                        "duration_minutes": 35,
+                        "type": "Interactive Workshop",
+                        "summary": "Simulate prompt injection attacks aimed at manipulating agent tool execution."
+                    },
+                    {
+                        "title": "Benchmarking Decision Bounds",
+                        "duration_minutes": 35,
+                        "type": "Code Exercise",
+                        "summary": "Measure agent compliance against explicit system boundaries."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Automated Red Teaming & Continuous Audit",
+                "description": "Build continuous evaluation pipelines for production agent updates.",
+                "lessons": [
+                    {
+                        "title": "Automated Red-Teaming Suites",
+                        "duration_minutes": 70,
+                        "type": "Practical Lab",
+                        "summary": "Run synthetic adversary loops to probe agent vulnerabilities."
+                    },
+                    {
+                        "title": "Safety Scoring & Deployment Gates",
+                        "duration_minutes": 70,
+                        "type": "System Design",
+                        "summary": "Define pass/fail evaluation thresholds for CI/CD agent release gates."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Agent Red Teaming & Safety Assessment Suite",
+            "description": "Construct an automated test harness that subjects an agent to 50+ adversarial scenarios and produces an executive safety score."
+        },
+        "instructor_bio": "Dr. Evelyn Vance is a Lead AI Safety Researcher specializing in autonomous system robustness and red-teaming methodologies.",
+        "faqs": [
+            {
+                "question": "Is this course applicable to custom agent frameworks?",
+                "answer": "Yes. The testing patterns apply universally regardless of whether you use LangGraph, AutoGen, or raw Python."
+            }
+        ]
+    },
+    "memory-architectures-for-long-context-agents": {
+        "what_you_will_learn": [
+            "Implement multi-tiered agent memory: working, short-term, and long-term",
+            "Store and retrieve episodic memories using vector search and timestamp decay",
+            "Summarize long conversations without losing critical user preferences",
+            "Prevent cross-tenant memory leakage in multi-user agent systems",
+            "Measure context retention accuracy across multi-session interactions"
+        ],
+        "prerequisites": ["Python intermediate proficiency", "Basic understanding of vector stores"],
+        "target_audience": [
+            "AI Developers building conversational agents with long-term persistence",
+            "Product Engineers designing personalized AI companions and assistants"
+        ],
+        "tools_used": ["Python 3.11", "Qdrant", "Redis", "LangGraph", "FastAPI"],
+        "estimated_effort": "3 hours total (1.5 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Memory Abstractions & Storage Layers",
+                "description": "Structure working memory buffers and persistent vector storage.",
+                "lessons": [
+                    {
+                        "title": "Episodic vs. Semantic Memory Models",
+                        "duration_minutes": 30,
+                        "type": "Architecture Overview",
+                        "summary": "Map cognitive memory concepts into software data structures."
+                    },
+                    {
+                        "title": "Context Compression & Rolling Summarization",
+                        "duration_minutes": 60,
+                        "type": "Code Workshop",
+                        "summary": "Build adaptive summarization hooks that preserve key facts while truncating raw history."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Retrieval & Multi-Session Continuity",
+                "description": "Query historical memories intelligently during live agent execution.",
+                "lessons": [
+                    {
+                        "title": "Time-Decayed Vector Memory Retrieval",
+                        "duration_minutes": 45,
+                        "type": "Hands-on Exercise",
+                        "summary": "Combine recency scoring with semantic similarity for optimal memory recall."
+                    },
+                    {
+                        "title": "Multi-Tenant Memory Isolation & Privacy",
+                        "duration_minutes": 45,
+                        "type": "Security Lab",
+                        "summary": "Implement tenant-isolated namespace keys to prevent cross-user data leakage."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Stateful Long-Term Executive Assistant Engine",
+            "description": "Build an AI executive assistant that maintains long-term memory of user preferences, meeting notes, and project history across multi-week sessions."
+        },
+        "instructor_bio": "Marcus Vance is a Principal AI Systems Engineer with extensive experience in memory compression algorithms and vector storage.",
+        "faqs": [
+            {
+                "question": "Which memory stores are integrated during the course?",
+                "answer": "We use Redis for high-speed working memory and Qdrant for long-term episodic vector storage."
+            }
+        ]
+    },
+    "tool-execution-and-api-synthesizers": {
+        "what_you_will_learn": [
+            "Auto-generate typed Pydantic tool schemas from OpenAPI endpoints",
+            "Construct isolated execution sandboxes for untrusted agent code",
+            "Handle dynamic tool selection and parameter validation at runtime",
+            "Implement rate-limiting and circuit breakers for agent API calls",
+            "Log and audit every tool call with full request/response payloads"
+        ],
+        "prerequisites": ["Python backend development", "Understanding of REST and OpenAPI specifications"],
+        "target_audience": [
+            "Backend Engineers integrating LLM agents with corporate APIs",
+            "DevOps Engineers securing automated tool environments"
+        ],
+        "tools_used": ["Python 3.11", "Pydantic v2", "Docker", "FastAPI", "HTTPX"],
+        "estimated_effort": "2.5 hours total (1.25 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Schema Generation & Tool Validation",
+                "description": "Convert REST APIs into safe, schema-validated agent tools.",
+                "lessons": [
+                    {
+                        "title": "Parsing OpenAPI Specs into Pydantic Models",
+                        "duration_minutes": 40,
+                        "type": "Code Workshop",
+                        "summary": "Dynamically inspect API specs and generate strict input validation models."
+                    },
+                    {
+                        "title": "Runtime Parameter Coercion & Error Catching",
+                        "duration_minutes": 40,
+                        "type": "Hands-on Exercise",
+                        "summary": "Catch invalid agent arguments before executing external HTTP calls."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Sandboxing & Resilient Call Execution",
+                "description": "Isolate tool execution environments and handle API failures.",
+                "lessons": [
+                    {
+                        "title": "Containerized Tool Execution Sandboxes",
+                        "duration_minutes": 40,
+                        "type": "Security Lab",
+                        "summary": "Run Python code execution tools inside ephemeral, resource-constrained Docker containers."
+                    },
+                    {
+                        "title": "Circuit Breakers & Retries for Agent Tools",
+                        "duration_minutes": 40,
+                        "type": "Resilience Engineering",
+                        "summary": "Prevent cascading failures when third-party APIs experience downtime."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Dynamic OpenAPI Tool Gateway for Autonomous Agents",
+            "description": "Build an API gateway service that ingests OpenAPI specs, exposes validated tool functions to agents, and executes calls in isolated sandbox containers."
+        },
+        "instructor_bio": "Siddharth Verma is a Senior API Infrastructure Architect who has built enterprise tool integration platforms for large-scale microservice environments.",
+        "faqs": [
+            {
+                "question": "Do I need Docker installed for this course?",
+                "answer": "Yes, Docker Desktop or Docker Engine is recommended for the containerized sandboxing module."
+            }
+        ]
+    },
+    "fine-tuning-open-source-llms": {
+        "what_you_will_learn": [
+            "Prepare, clean, and format instruction datasets for SFT (Supervised Fine-Tuning)",
+            "Apply Low-Rank Adaptation (LoRA) and 4-bit quantization (QLoRA)",
+            "Fine-tune open-weights models like Llama 3 and Mistral using HuggingFace TRL",
+            "Evaluate fine-tuned models using perplexity and task-specific benchmarks",
+            "Export merged LoRA weights for efficient production deployment"
+        ],
+        "prerequisites": ["Python proficiency", "Basic knowledge of PyTorch and deep learning concepts"],
+        "target_audience": [
+            "Machine Learning Engineers customizing open-source models for domain tasks",
+            "Data Scientists seeking cost-effective alternatives to commercial LLM APIs"
+        ],
+        "tools_used": ["PyTorch", "HuggingFace Transformers", "TRL", "PEFT", "BitsAndBytes", "Weights & Biases"],
+        "estimated_effort": "4.5 hours total (2.25 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Dataset Curation & LoRA Architecture",
+                "description": "Format instruction datasets and configure parameter-efficient adapters.",
+                "lessons": [
+                    {
+                        "title": "Instruction Dataset Preprocessing & Tokenization",
+                        "duration_minutes": 60,
+                        "type": "Code Workshop",
+                        "summary": "Format multi-turn conversation datasets into standardized ChatML structures."
+                    },
+                    {
+                        "title": "Understanding LoRA & QLoRA Quantization",
+                        "duration_minutes": 60,
+                        "type": "Deep Dive Lecture",
+                        "summary": "Deconstruct adapter rank, alpha parameters, and 4-bit NormalFloat quantization mechanics."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: SFT Training & Model Evaluation",
+                "description": "Execute fine-tuning runs, track metrics, and export final model weights.",
+                "lessons": [
+                    {
+                        "title": "Supervised Fine-Tuning with HuggingFace TRL",
+                        "duration_minutes": 75,
+                        "type": "Hands-on Training Lab",
+                        "summary": "Train a LoRA adapter on single-GPU hardware using SFTTrainer."
+                    },
+                    {
+                        "title": "Evaluation, Weight Merging & Inference",
+                        "duration_minutes": 75,
+                        "type": "Lab Session",
+                        "summary": "Evaluate fine-tuned model loss, merge adapter weights into base models, and run vLLM inference."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Domain-Adapted Financial Q&A Language Model",
+            "description": "Curate a specialized financial dataset, fine-tune a Llama-3 model using QLoRA, evaluate output precision against the base model, and deploy it for local inference."
+        },
+        "instructor_bio": "Dr. Aris Thorne is an LLM Research Engineer specializing in parameter-efficient fine-tuning and model alignment techniques.",
+        "faqs": [
+            {
+                "question": "Can I complete this course using free Google Colab T4 GPUs?",
+                "answer": "Yes! All exercises are optimized to run within free T4 GPU memory limits using 4-bit QLoRA."
+            }
+        ]
+    },
+    "multimodal-ai-system-engineering": {
+        "what_you_will_learn": [
+            "Process image, audio, and textual data with unified multimodal models",
+            "Build visual Question Answering (VQA) pipelines using Vision-LLMs",
+            "Extract structured JSON data from complex PDF documents and diagrams",
+            "Embed multimodal content into vector databases for cross-modal retrieval",
+            "Implement real-time audio transcription and speech synthesis flows"
+        ],
+        "prerequisites": ["Python intermediate proficiency", "Basic familiarity with REST APIs"],
+        "target_audience": [
+            "AI Platform Engineers building multi-modal search and document processing services",
+            "Software Engineers developing vision-aware web applications"
+        ],
+        "tools_used": ["Python 3.11", "Whisper", "OpenCV", "Qdrant", "Pydantic", "FastAPI"],
+        "estimated_effort": "4 hours total (2 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Vision-Language Models & Document Parsing",
+                "description": "Extract text, tables, and visual evidence from images and PDFs.",
+                "lessons": [
+                    {
+                        "title": "Vision-LLM Prompting & Schema Extraction",
+                        "duration_minutes": 55,
+                        "type": "Code Workshop",
+                        "summary": "Pass image inputs to Vision models to extract structured JSON data from invoices and charts."
+                    },
+                    {
+                        "title": "Multi-Modal Document Parsing Pipelines",
+                        "duration_minutes": 65,
+                        "type": "Hands-on Exercise",
+                        "summary": "Combine OCR, layout detection, and vision models to parse complex PDF layouts."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Audio Intelligence & Cross-Modal RAG",
+                "description": "Index visual and audio embeddings for multi-modal similarity search.",
+                "lessons": [
+                    {
+                        "title": "Speech-to-Text Transcription with Whisper",
+                        "duration_minutes": 60,
+                        "type": "Lab Session",
+                        "summary": "Transcribe audio streams with word-level timestamps and speaker diarization."
+                    },
+                    {
+                        "title": "Cross-Modal Vector Embeddings in Qdrant",
+                        "duration_minutes": 60,
+                        "type": "System Design",
+                        "summary": "Index joint image-text embeddings (CLIP) for natural language image search."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Multimodal Technical Inspector & Audio Summarizer",
+            "description": "Construct an application that ingests blueprint images and voice notes, queries a multimodal vector index, and outputs an interactive inspection report."
+        },
+        "instructor_bio": "Elena Rostova is a Senior Multimodal Systems Architect who has built document intelligence and vision-RAG systems for global tech enterprises.",
+        "faqs": [
+            {
+                "question": "Does this course cover local vision models like Llama 3.2 Vision?",
+                "answer": "Yes, lessons cover both hosted API endpoints and local open-source vision runtimes."
+            }
+        ]
+    },
+    "small-language-models-in-edge-production": {
+        "what_you_will_learn": [
+            "Quantize large models into GGUF, AWQ, and ONNX formats for edge devices",
+            "Run high-throughput local inference using llama.cpp and vLLM",
+            "Optimize memory footprints for low-power ARM and desktop GPUs",
+            "Build local, privacy-first AI features without external internet connectivity",
+            "Benchmark token generation speeds (tok/s) across hardware configurations"
+        ],
+        "prerequisites": ["Python intermediate proficiency", "Basic command-line familiarity"],
+        "target_audience": [
+            "Edge AI Engineers deploying models on mobile, desktop, or IoT hardware",
+            "Privacy-conscious Developers building offline-first applications"
+        ],
+        "tools_used": ["llama.cpp", "Ollama", "ONNX Runtime", "Python 3.11", "FastAPI"],
+        "estimated_effort": "3 hours total (1.5 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Quantization Mechanics & Local Runtimes",
+                "description": "Understand 4-bit/8-bit quantization and configure local engines.",
+                "lessons": [
+                    {
+                        "title": "Quantization Formats: GGUF vs. AWQ vs. ONNX",
+                        "duration_minutes": 45,
+                        "type": "Technical Lecture",
+                        "summary": "Evaluate trade-offs between model size, RAM consumption, and output quality."
+                    },
+                    {
+                        "title": "Configuring llama.cpp & Ollama Local Servers",
+                        "duration_minutes": 50,
+                        "type": "Code Workshop",
+                        "summary": "Deploy local server endpoints with OpenAI-compatible REST interfaces."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Edge Integration & Performance Benchmarking",
+                "description": "Integrate local SLMs into desktop apps and measure throughput.",
+                "lessons": [
+                    {
+                        "title": "Python Bindings & Local Async Streaming",
+                        "duration_minutes": 50,
+                        "type": "Hands-on Exercise",
+                        "summary": "Stream generated tokens asynchronously into local user interfaces."
+                    },
+                    {
+                        "title": "Benchmarking Throughput & Memory Profiling",
+                        "duration_minutes": 50,
+                        "type": "Profiling Lab",
+                        "summary": "Profile GPU VRAM, system RAM, and tokens-per-second performance metrics."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Zero-Latency Offline Privacy Assistant",
+            "description": "Develop a lightweight, self-contained desktop assistant powered by a 3B quantized SLM that runs 100% offline with zero cloud API dependencies."
+        },
+        "instructor_bio": "Kenji Sato is an Embedded AI Systems Specialist with over 10 years of experience deploying machine learning models on edge devices.",
+        "faqs": [
+            {
+                "question": "Can I take this course on a standard laptop without a high-end GPU?",
+                "answer": "Yes! Quantized 3B models run smoothly on standard Apple Silicon (M-series) or Intel/AMD CPUs with 8GB RAM."
+            }
+        ]
+    },
+    "mlops-model-monitoring-and-drift-detection": {
+        "what_you_will_learn": [
+            "Identify data drift, concept drift, and target leakage in live ML pipelines",
+            "Calculate statistical drift metrics: Kolmogorov-Smirnov test, PSI, and Wasserstein distance",
+            "Build automated data drift monitoring dashboards using Evidently AI",
+            "Trigger automated model retraining pipelines upon drift threshold breaches",
+            "Monitor prediction latency, memory usage, and input payload validation"
+        ],
+        "prerequisites": ["Python intermediate proficiency", "Basic knowledge of machine learning pipelines"],
+        "target_audience": [
+            "MLOps Engineers maintaining production model infrastructure",
+            "Data Scientists responsible for deployed model health and accuracy"
+        ],
+        "tools_used": ["Evidently AI", "Python 3.11", "Prometheus", "Grafana", "FastAPI"],
+        "estimated_effort": "3.5 hours total (1.75 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Statistical Drift Metrics & Data Auditing",
+                "description": "Measure distribution shifts between training baseline and production data.",
+                "lessons": [
+                    {
+                        "title": "Data Drift vs. Concept Drift Mechanics",
+                        "duration_minutes": 45,
+                        "type": "Interactive Overview",
+                        "summary": "Understand how changing feature distributions corrupt downstream prediction accuracy."
+                    },
+                    {
+                        "title": "Statistical Tests for Drift Identification",
+                        "duration_minutes": 55,
+                        "type": "Code Workshop",
+                        "summary": "Compute PSI (Population Stability Index) and KS-tests on numerical and categorical features."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Dashboarding, Alerts & Retraining Hooks",
+                "description": "Integrate real-time monitoring and automated alerts into CI/CD pipelines.",
+                "lessons": [
+                    {
+                        "title": "Evidently AI Dashboard Integration",
+                        "duration_minutes": 50,
+                        "type": "Hands-on Exercise",
+                        "summary": "Generate visual HTML drift reports and export raw metrics to Prometheus."
+                    },
+                    {
+                        "title": "Automated Retraining Trigger Pipelines",
+                        "duration_minutes": 50,
+                        "type": "Ops Lab",
+                        "summary": "Configure webhook alerts that automatically launch retraining jobs when drift exceeds thresholds."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Real-Time Drift Detection & Alerting Service",
+            "description": "Build a production monitoring service that inspects incoming inference requests, detects feature drift using Evidently, and posts alert digests to Slack/Webhook endpoints."
+        },
+        "instructor_bio": "Hannah Lindqvist is a Principal MLOps Infrastructure Architect who manages model monitoring systems for financial risk predictions.",
+        "faqs": [
+            {
+                "question": "What tools are used for generating monitoring reports?",
+                "answer": "We use Evidently AI alongside Prometheus and Grafana for metrics visualization."
+            }
+        ]
+    },
+    "graph-neural-networks-in-practice": {
+        "what_you_will_learn": [
+            "Represent complex relational domain data as nodes, edges, and graph matrices",
+            "Implement Graph Convolutional Networks (GCN) and Graph Attention Networks (GAT)",
+            "Execute node classification, link prediction, and graph embedding tasks in PyTorch Geometric",
+            "Scale GNN training to large graphs using neighbor sampling techniques",
+            "Deploy GNN model endpoints for real-time recommendation and fraud detection"
+        ],
+        "prerequisites": ["Python proficiency", "Solid understanding of PyTorch and linear algebra"],
+        "target_audience": [
+            "Data Scientists working with network, social, or molecular graph datasets",
+            "ML Engineers building graph-based recommendation systems"
+        ],
+        "tools_used": ["PyTorch", "PyTorch Geometric (PyG)", "NetworkX", "Python 3.11", "Scikit-Learn"],
+        "estimated_effort": "4 hours total (2 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Graph Representation & Message Passing",
+                "description": "Formulate graph objects and master node message-passing mechanics.",
+                "lessons": [
+                    {
+                        "title": "Graph Topology & Adjacency Matrices",
+                        "duration_minutes": 50,
+                        "type": "Theoretical Foundations",
+                        "summary": "Map graphs into PyTorch Geometric Data structures with edge indices and feature matrices."
+                    },
+                    {
+                        "title": "Message Passing & Graph Convolutions (GCN)",
+                        "duration_minutes": 75,
+                        "type": "Code Workshop",
+                        "summary": "Implement custom message-passing layers to aggregate node neighbor features."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Graph Attention & Production Scale",
+                "description": "Use attention mechanisms and scale GNNs to multi-million edge networks.",
+                "lessons": [
+                    {
+                        "title": "Graph Attention Networks (GAT)",
+                        "duration_minutes": 60,
+                        "type": "Hands-on Exercise",
+                        "summary": "Apply self-attention over node neighborhoods to weigh relational importance."
+                    },
+                    {
+                        "title": "Neighbor Sampling & Large-Graph Training",
+                        "duration_minutes": 65,
+                        "type": "Scalability Lab",
+                        "summary": "Train GNNs on graphs that exceed GPU memory using PyG NeighborLoader."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "E-Commerce Fraud Detection Graph Engine",
+            "description": "Construct a Graph Neural Network on a heterogeneous user-transaction graph to predict fraudulent accounts with high precision."
+        },
+        "instructor_bio": "Prof. Julian Kross is a Graph AI Researcher who has published extensive work on scalable graph neural network architectures.",
+        "faqs": [
+            {
+                "question": "Do I need prior experience with PyTorch Geometric?",
+                "answer": "No. Standard PyTorch knowledge is required, but PyTorch Geometric is introduced from the ground up."
+            }
+        ]
+    },
+    "explainable-ai-and-interpretable-models": {
+        "what_you_will_learn": [
+            "Compute global and local feature attributions using SHAP (Shapley Additive exPlanations)",
+            "Apply LIME (Local Interpretable Model-agnostic Explanations) to tabular and text data",
+            "Generate Partial Dependence Plots (PDP) and Accumulated Local Effects (ALE)",
+            "Audit black-box models for hidden bias, demographic disparity, and spurious correlations",
+            "Export human-readable model explanation reports for regulatory compliance"
+        ],
+        "prerequisites": ["Python intermediate proficiency", "Familiarity with Scikit-Learn or XGBoost"],
+        "target_audience": [
+            "Data Scientists needing to explain complex model decisions to stakeholders",
+            "Compliance & Risk Officers auditing algorithmic fairness in enterprise systems"
+        ],
+        "tools_used": ["SHAP", "LIME", "Scikit-Learn", "XGBoost", "Python 3.11", "Matplotlib"],
+        "estimated_effort": "2.5 hours total (1.25 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Game Theory & SHAP Feature Attributions",
+                "description": "Understand Shapley values and calculate exact local feature importance.",
+                "lessons": [
+                    {
+                        "title": "Shapley Value Foundations & TreeSHAP",
+                        "duration_minutes": 40,
+                        "type": "Deep Dive Lecture",
+                        "summary": "Deconstruct cooperative game theory concepts applied to model prediction contributions."
+                    },
+                    {
+                        "title": "Generating SHAP Summary & Force Plots",
+                        "duration_minutes": 35,
+                        "type": "Code Workshop",
+                        "summary": "Visualize global feature interactions and individual decision breakdowns."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: LIME & Algorithmic Fairness Audits",
+                "description": "Explain individual predictions locally and audit model equity.",
+                "lessons": [
+                    {
+                        "title": "LIME Explanations for Tabular & Text Classifiers",
+                        "duration_minutes": 35,
+                        "type": "Hands-on Exercise",
+                        "summary": "Fit surrogate linear models around complex predictions to generate intuitive explanations."
+                    },
+                    {
+                        "title": "Auditing Bias & Disparate Impact",
+                        "duration_minutes": 40,
+                        "type": "Compliance Lab",
+                        "summary": "Measure demographic parity and equalized odds metrics across sensitive attributes."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Auditable Loan Application Risk Explainer",
+            "description": "Train an XGBoost credit risk model and build an interactive explanation portal that provides applicants with clear, legally compliant reasons for decision outcomes."
+        },
+        "instructor_bio": "Deepak Sen is a Senior AI Audit Consultant who specializes in model explainability and regulatory compliance for financial institutions.",
+        "faqs": [
+            {
+                "question": "Can SHAP be used with neural networks as well as tree-based models?",
+                "answer": "Yes! The course covers TreeSHAP for tree models and KernelSHAP/DeepSHAP for neural networks."
+            }
+        ]
+    },
+    "real-time-streaming-analytics-with-apache-flink": {
+        "what_you_will_learn": [
+            "Architect real-time event processing pipelines with Apache Flink and Kafka",
+            "Master event-time temporal windows: tumbling, sliding, and session windows",
+            "Manage stateful operators, RocksDB state backends, and savepoint snapshots",
+            "Implement event stream joins, interval joins, and temporal table enrichment",
+            "Ensure exactly-once processing guarantees across distributed streaming clusters"
+        ],
+        "prerequisites": ["Understanding of event-driven concepts", "Proficiency in Python or Java"],
+        "target_audience": [
+            "Data Engineers building high-volume streaming platforms",
+            "Backend Systems Architects designing low-latency event processing services"
+        ],
+        "tools_used": ["Apache Flink", "PyFlink", "Apache Kafka", "Docker", "Python 3.11"],
+        "estimated_effort": "4.5 hours total (2.25 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Flink Streaming Core & Windowing",
+                "description": "Understand stream execution graphs, watermarks, and windowing semantics.",
+                "lessons": [
+                    {
+                        "title": "Event Time vs. Processing Time & Watermarks",
+                        "duration_minutes": 65,
+                        "type": "Architecture Deep Dive",
+                        "summary": "Handle out-of-order event arrivals and late data using watermark generators."
+                    },
+                    {
+                        "title": "Tumbling, Sliding & Session Window Aggregations",
+                        "duration_minutes": 65,
+                        "type": "Code Workshop",
+                        "summary": "Implement real-time window aggregations over high-throughput event streams."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: State Management & Stream Joins",
+                "description": "Manage operator state, perform stream-stream joins, and configure savepoints.",
+                "lessons": [
+                    {
+                        "title": "Stateful Stream Processing & RocksDB Backends",
+                        "duration_minutes": 70,
+                        "type": "Hands-on Exercise",
+                        "summary": "Configure keyed state, state TTL policies, and persistent RocksDB checkpoints."
+                    },
+                    {
+                        "title": "Temporal Stream Joins & Kafka Integration",
+                        "duration_minutes": 70,
+                        "type": "Streaming Lab",
+                        "summary": "Join real-time clickstreams with dynamic user lookup tables stored in Kafka topics."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Real-Time Financial Transaction Fraud Alerting Engine",
+            "description": "Build a PyFlink streaming job connected to Kafka that processes credit card transactions, evaluates velocity sliding windows, and flags fraud anomalies in under 50ms."
+        },
+        "instructor_bio": "Viktor Hansen is a Distributed Systems Architect with 10+ years of experience engineering real-time streaming platforms for telecom and fintech leaders.",
+        "faqs": [
+            {
+                "question": "Is PyFlink (Python API) used in this course?",
+                "answer": "Yes! All lessons and practical exercises use the PyFlink Python API."
+            }
+        ]
+    },
+    "polars-for-high-performance-data-processing": {
+        "what_you_will_learn": [
+            "Process multi-gigabyte datasets fast using Polars multi-threaded Rust execution",
+            "Optimize queries using Polars LazyFrame query planner and predicate pushdown",
+            "Master Polars expression syntax for complex aggregations and transformations",
+            "Execute out-of-core streaming queries that exceed available system RAM",
+            "Migrate existing Pandas codebases to idiomatic Polars for 10x–50x speedups"
+        ],
+        "prerequisites": ["Python intermediate proficiency", "Experience with Pandas or SQL"],
+        "target_audience": [
+            "Data Analysts and Engineers struggling with slow Pandas dataframes",
+            "Data Scientists handling large tabular datasets locally"
+        ],
+        "tools_used": ["Polars", "Python 3.11", "PyArrow", "Jupyter Notebooks", "VS Code"],
+        "estimated_effort": "2.5 hours total (1.25 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Polars Expressions & Eager vs. Lazy Execution",
+                "description": "Master expression contexts and query optimization.",
+                "lessons": [
+                    {
+                        "title": "Polars Expression Syntax & Column Selection",
+                        "duration_minutes": 35,
+                        "type": "Code Workshop",
+                        "summary": "Write vectorized, composable Polars expressions without lambda functions."
+                    },
+                    {
+                        "title": "The Lazy API & Query Optimizer",
+                        "duration_minutes": 35,
+                        "type": "Performance Lab",
+                        "summary": "Inspect query execution plans, predicate pushdown, and projection pruning."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Streaming & Out-of-Core Processing",
+                "description": "Process datasets larger than memory and execute complex joins.",
+                "lessons": [
+                    {
+                        "title": "Streaming Engine for Out-of-Core Data",
+                        "duration_minutes": 30,
+                        "type": "Hands-on Exercise",
+                        "summary": "Process 20GB Parquet files on an 8GB RAM machine using `streaming=True`."
+                    },
+                    {
+                        "title": "High-Speed Joins & GroupBy Windowing",
+                        "duration_minutes": 35,
+                        "type": "Advanced Workshop",
+                        "summary": "Execute parallel joins, rolling window calculations, and pivot operations."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "High-Throughput Analytics Pipeline Migration",
+            "description": "Refactor a legacy 100-line Pandas ETL script into a high-speed Polars LazyFrame pipeline, reducing execution runtime from 5 minutes to under 8 seconds."
+        },
+        "instructor_bio": "Sofia Rossi is a High-Performance Data Engineer who specializes in memory-efficient Python data infrastructure and Rust integrations.",
+        "faqs": [
+            {
+                "question": "Is Polars fully compatible with Pandas syntax?",
+                "answer": "Polars has an intentional, cleaner API designed for speed rather than 1:1 Pandas syntax clone."
+            }
+        ]
+    },
+    "causal-inference-for-data-science": {
+        "what_you_will_learn": [
+            "Formulate causal questions using Directed Acyclic Graphs (DAGs) and Structural Causal Models",
+            "Identify confounding, collider bias, and selection bias in observational data",
+            "Implement Propensity Score Matching (PSM) and Inverse Probability Weighting (IPW)",
+            "Apply Difference-in-Differences (DiD) and Synthetic Control methods",
+            "Estimate heterogeneous treatment effects using Causal Forests and DoWhy"
+        ],
+        "prerequisites": ["Python intermediate proficiency", "Basic understanding of probability and regression"],
+        "target_audience": [
+            "Data Scientists evaluating product features without randomized control trials",
+            "Quantitative Researchers making policy or pricing recommendations"
+        ],
+        "tools_used": ["DoWhy", "CausalML", "Statsmodels", "Python 3.11", "Scikit-Learn"],
+        "estimated_effort": "4 hours total (2 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Causal Graphs & Confounding Identification",
+                "description": "Draw causal DAGs and isolate treatment effect mechanisms.",
+                "lessons": [
+                    {
+                        "title": "Structural Causal Models & DAG Design",
+                        "duration_minutes": 55,
+                        "type": "Theoretical Workshop",
+                        "summary": "Identify back-door paths, front-door paths, and colliders in causal graphs."
+                    },
+                    {
+                        "title": "Propensity Score Matching & Weighting",
+                        "duration_minutes": 55,
+                        "type": "Code Exercise",
+                        "summary": "Balance treatment and control groups using logistic propensity scoring."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Quasi-Experiments & Modern Causal ML",
+                "description": "Apply DiD, Synthetic Controls, and Machine Learning Causal Forests.",
+                "lessons": [
+                    {
+                        "title": "Difference-in-Differences & Synthetic Controls",
+                        "duration_minutes": 55,
+                        "type": "Practical Lab",
+                        "summary": "Estimate treatment effects across parallel historical trends."
+                    },
+                    {
+                        "title": "Heterogeneous Treatment Effects with DoWhy",
+                        "duration_minutes": 55,
+                        "type": "System Design",
+                        "summary": "Use Microsoft DoWhy to refactor observational data analysis into 4 step causal checks."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Product Pricing Change Causal Impact Analysis",
+            "description": "Analyze an observational dataset of product feature adoption to measure true revenue lift while controlling for marketing spend and user demographics."
+        },
+        "instructor_bio": "Dr. Lars Mikkelsen is a Principal Econometrician with 15+ years of experience applying causal inference to technology products.",
+        "faqs": [
+            {
+                "question": "Why is causal inference necessary if we already do A/B testing?",
+                "answer": "A/B tests are expensive or unethical for many decisions; causal inference unlocks insights from historical data."
+            }
+        ]
+    },
+    "python-concurrency-asyncio-and-multiprocessing": {
+        "what_you_will_learn": [
+            "Deconstruct the Python Event Loop, tasks, coroutines, and future objects",
+            "Bypass Global Interpreter Lock (GIL) limitations using `multiprocessing` and process pools",
+            "Manage thread pools safely with locking primitives, queues, and semaphores",
+            "Handle cancelled tasks, timeouts, and exception propagation in async gathering",
+            "Profile CPU-bound vs. I/O-bound bottlenecks to select optimal concurrency models"
+        ],
+        "prerequisites": ["Python intermediate proficiency (functions, classes, exception handling)"],
+        "target_audience": [
+            "Backend Developers building high-concurrency web services and scrapers",
+            "Systems Engineers optimizing CPU-heavy Python data tools"
+        ],
+        "tools_used": ["Python 3.11", "Asyncio", "Concurrent.Futures", "cProfile", "HTTPX"],
+        "estimated_effort": "3.5 hours total (1.75 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Asyncio Event Loop & Non-Blocking I/O",
+                "description": "Master async coroutines, task scheduling, and non-blocking I/O.",
+                "lessons": [
+                    {
+                        "title": "Event Loop Internals & Task Execution",
+                        "duration_minutes": 50,
+                        "type": "Deep Dive",
+                        "summary": "Understand how the event loop multiplexes socket I/O without OS threads."
+                    },
+                    {
+                        "title": "Gathering Tasks, Semaphores & Timeouts",
+                        "duration_minutes": 55,
+                        "type": "Code Workshop",
+                        "summary": "Execute 100+ concurrent API requests safely using `asyncio.Semaphore`."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Multiprocessing, Threading & GIL Bypass",
+                "description": "Utilize multi-core CPUs for heavy computations and manage shared state.",
+                "lessons": [
+                    {
+                        "title": "ProcessPoolExecutor vs. ThreadPoolExecutor",
+                        "duration_minutes": 50,
+                        "type": "Hands-on Exercise",
+                        "summary": "Delegate CPU-bound math to worker processes and I/O tasks to thread pools."
+                    },
+                    {
+                        "title": "Concurrency Debugging & Race Condition Prevention",
+                        "duration_minutes": 55,
+                        "type": "Debugging Lab",
+                        "summary": "Spot deadlocks, race conditions, and unhandled async exception warnings."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "High-Throughput Concurrent Web Scraper & Parser Engine",
+            "description": "Build an async web scraping service that fetches thousands of pages via `asyncio` and processes HTML parsing across multi-core process pools."
+        },
+        "instructor_bio": "Gwen Tennyson is a Senior Python Core Systems Engineer who has architected high-concurrency infrastructure for streaming applications.",
+        "faqs": [
+            {
+                "question": "Does Python 3.13 free-threaded (no-GIL) build affect this material?",
+                "answer": "The course covers both standard GIL mechanics and how future free-threading models interact with process pools."
+            }
+        ]
+    },
+    "design-patterns-in-modern-python": {
+        "what_you_will_learn": [
+            "Implement Creational patterns: Factory Method, Builder, and Singleton variants",
+            "Apply Structural patterns: Adapter, Decorator, Facade, and Composite",
+            "Utilize Behavioral patterns: Strategy, Observer, Command, and Chain of Responsibility",
+            "Leverage Python 3 features: Dataclasses, Protocols (`typing.Protocol`), and ABCs",
+            "Refactor monolithic conditional code into clean, extensible pattern designs"
+        ],
+        "prerequisites": ["Python intermediate proficiency", "Basic knowledge of object-oriented concepts"],
+        "target_audience": [
+            "Software Engineers wanting to write cleaner, more maintainable Python",
+            "Technical Leads establishing object-oriented architecture guidelines"
+        ],
+        "tools_used": ["Python 3.11", "Mypy", "Ruff", "VS Code", "Pytest"],
+        "estimated_effort": "3 hours total (1.5 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Creational & Structural Pythonic Patterns",
+                "description": "Build flexible object creation and structural adapter abstractions.",
+                "lessons": [
+                    {
+                        "title": "Factory Methods & Protocol Interfaces",
+                        "duration_minutes": 45,
+                        "type": "Code Workshop",
+                        "summary": "Decouple caller logic from concrete implementations using structural typing."
+                    },
+                    {
+                        "title": "The Decorator & Adapter Patterns in Python",
+                        "duration_minutes": 40,
+                        "type": "Hands-on Exercise",
+                        "summary": "Wrap external client libraries into uniform application interfaces."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Behavioral Patterns & Architectural Decoupling",
+                "description": "Manage object interactions and behavioral delegation cleanly.",
+                "lessons": [
+                    {
+                        "title": "The Strategy Pattern for Dynamic Business Logic",
+                        "duration_minutes": 45,
+                        "type": "Refactoring Lab",
+                        "summary": "Replace nested `if/elif` blocks with pluggable strategy classes."
+                    },
+                    {
+                        "title": "Observer & Command Patterns for Event Systems",
+                        "duration_minutes": 45,
+                        "type": "System Design",
+                        "summary": "Implement lightweight event dispatchers and undoable command objects."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Extensible Payment & Notification Processing Framework",
+            "description": "Design an extensible payment processing library supporting multiple gateways using Factory, Strategy, and Observer design patterns."
+        },
+        "instructor_bio": "Nigel Thorne is a Principal Software Architect and author on software craft and Python design patterns.",
+        "faqs": [
+            {
+                "question": "Are these patterns identical to traditional Java GoF patterns?",
+                "answer": "No. Python's first-class functions and dynamic type system simplify many classic GoF patterns."
+            }
+        ]
+    },
+    "nextjs-fullstack-architecture": {
+        "what_you_will_learn": [
+            "Build fullstack web apps using React Server Components (RSC) and Next.js App Router",
+            "Implement Server Actions for secure form mutations and revalidation",
+            "Optimize dynamic data fetching, static rendering, and granular cache tagging",
+            "Protect routes with middleware, session authentication, and CSRF tokens",
+            "Deploy Next.js apps with streaming server-side rendering (SSR) and edge functions"
+        ],
+        "prerequisites": ["Basic JavaScript/TypeScript proficiency", "Familiarity with React basics"],
+        "target_audience": [
+            "Frontend Developers expanding into fullstack React development",
+            "Web Developers adopting Next.js 14+ App Router architecture"
+        ],
+        "tools_used": ["Next.js 14", "React 18", "TypeScript", "Tailwind CSS", "Prisma/Drizzle"],
+        "estimated_effort": "4 hours total (2 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: React Server Components & Routing",
+                "description": "Master server-side rendering, layout nesting, and streaming UI.",
+                "lessons": [
+                    {
+                        "title": "Server Components vs. Client Components",
+                        "duration_minutes": 60,
+                        "type": "Interactive Overview",
+                        "summary": "Understand component boundaries, bundle optimization, and security isolation."
+                    },
+                    {
+                        "title": "Nested Layouts & Dynamic Route Groups",
+                        "duration_minutes": 60,
+                        "type": "Code Workshop",
+                        "summary": "Build complex dashboards with shared layouts, loading skeletons, and error boundaries."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Server Actions, Caching & Data Mutation",
+                "description": "Handle data mutations, cache revalidation, and database persistence.",
+                "lessons": [
+                    {
+                        "title": "Server Actions & Form Validation",
+                        "duration_minutes": 60,
+                        "type": "Hands-on Exercise",
+                        "summary": "Mutate database records directly from server actions with Zod schema validation."
+                    },
+                    {
+                        "title": "Cache Control, Tagging & Revalidation",
+                        "duration_minutes": 60,
+                        "type": "Performance Lab",
+                        "summary": "Configure `revalidateTag` and `revalidatePath` for instant visual updates."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Fullstack E-Commerce Product Marketplace",
+            "description": "Build a responsive Next.js marketplace featuring server-rendered product pages, streaming instant search, shopping cart server actions, and authenticated checkout routes."
+        },
+        "instructor_bio": "Chloe Bennett is a Lead Frontend Engineer and Web Consultant with extensive expertise in modern React and Next.js applications.",
+        "faqs": [
+            {
+                "question": "Does this course cover Next.js Pages Router or App Router?",
+                "answer": "The course is 100% focused on modern App Router architecture and Server Components."
+            }
+        ]
+    },
+    "web-performance-optimization-masterclass": {
+        "what_you_will_learn": [
+            "Measure and optimize Core Web Vitals: LCP, INP, and CLS",
+            "Analyze Chrome DevTools Performance traces, Flamecharts, and Network waterfalls",
+            "Implement code splitting, tree shaking, and lazy loading strategies",
+            "Optimize font loading, responsive images (AVIF/WebP), and SVG assets",
+            "Configure HTTP/3, CDN caching headers, and service worker caching layers"
+        ],
+        "prerequisites": ["Frontend development experience (HTML, CSS, JS)", "Basic DevTools usage"],
+        "target_audience": [
+            "Senior Frontend Engineers responsible for web page performance and conversion",
+            "Full Stack Developers optimizing slow web applications"
+        ],
+        "tools_used": ["Chrome DevTools", "Lighthouse", "WebPageTest", "Webpack/Vite", "JavaScript"],
+        "estimated_effort": "3 hours total (1.5 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Core Web Vitals & Performance Auditing",
+                "description": "Audit rendering bottlenecks and measure user-centric performance.",
+                "lessons": [
+                    {
+                        "title": "Deconstructing LCP, INP, and CLS Metrics",
+                        "duration_minutes": 45,
+                        "type": "Technical Audit",
+                        "summary": "Identify main-thread blocking scripts, layout shifts, and slow resource loads."
+                    },
+                    {
+                        "title": "Chrome DevTools Performance Profiling",
+                        "duration_minutes": 45,
+                        "type": "Profiling Workshop",
+                        "summary": "Record CPU profiles, inspect long tasks, and isolate Javascript memory leaks."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Bundle Optimization & Asset Delivery",
+                "description": "Minimize JavaScript payloads and optimize critical rendering paths.",
+                "lessons": [
+                    {
+                        "title": "Tree Shaking, Dynamic Imports & Code Splitting",
+                        "duration_minutes": 45,
+                        "type": "Code Workshop",
+                        "summary": "Configure bundler dynamic imports to load heavy modules only when needed."
+                    },
+                    {
+                        "title": "Asset Compression & CDN Caching Strategies",
+                        "duration_minutes": 45,
+                        "type": "Infrastructure Lab",
+                        "summary": "Set up HTTP caching headers, Brotli compression, and prefetching directives."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Slow Dashboard Speed Transformation Audit",
+            "description": "Take a bloated, 5-second loading legacy web application and optimize its assets, bundle sizes, and rendering loop to achieve a sub-1s LCP and 95+ Lighthouse score."
+        },
+        "instructor_bio": "Liam O'Connor is a Web Performance Engineer who has optimized top-100 high-traffic media sites for lightning-fast delivery.",
+        "faqs": [
+            {
+                "question": "Will this course cover the new INP (Interaction to Next Paint) metric?",
+                "answer": "Yes! INP optimization strategies and main-thread task splitting are core topics."
+            }
+        ]
+    },
+    "building-real-time-web-apps-with-websockets": {
+        "what_you_will_learn": [
+            "Build full-duplex real-time communication flows using WebSockets",
+            "Implement Server-Sent Events (SSE) for unidirectional live updates",
+            "Manage client reconnection backoff, heartbeats, and connection state",
+            "Scale WebSocket backends horizontally using Redis Pub/Sub channels",
+            "Secure WebSocket connections with short-lived authentication tokens"
+        ],
+        "prerequisites": ["Intermediate JavaScript and Python backend proficiency"],
+        "target_audience": [
+            "Web Engineers adding live chat, real-time feeds, or collaboration features",
+            "Backend Engineers scaling persistent connection infrastructures"
+        ],
+        "tools_used": ["JavaScript", "Python 3.11", "FastAPI", "Redis Pub/Sub", "WebSockets"],
+        "estimated_effort": "2.5 hours total (1.25 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: WebSocket Protocols & Client Connections",
+                "description": "Understand WebSocket handshakes, frame formats, and reconnection.",
+                "lessons": [
+                    {
+                        "title": "WebSocket Handshake & Frame Lifecycle",
+                        "duration_minutes": 40,
+                        "type": "Interactive Overview",
+                        "summary": "Inspect HTTP upgrade requests, WebSocket binary/text frames, and ping/pong keepalives."
+                    },
+                    {
+                        "title": "Building Resilient Client Reconnection Loops",
+                        "duration_minutes": 40,
+                        "type": "Code Workshop",
+                        "summary": "Implement exponential backoff and message queues for disconnected clients."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Server-Sent Events & Redis Pub/Sub Scale",
+                "description": "Scale real-time broadcasting across multi-process backend workers.",
+                "lessons": [
+                    {
+                        "title": "Server-Sent Events (SSE) for Live Feeds",
+                        "duration_minutes": 40,
+                        "type": "Hands-on Exercise",
+                        "summary": "Build lightweight, HTTP-based live notification feeds using SSE stream endpoints."
+                    },
+                    {
+                        "title": "Multi-Server Broadcasting with Redis Pub/Sub",
+                        "duration_minutes": 40,
+                        "type": "Scalability Lab",
+                        "summary": "Broadcast messages across independent WebSocket server nodes via Redis channels."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Real-Time Collaborative Live Dashboard",
+            "description": "Build a real-time dashboard application that streams metric updates over WebSockets, supports multi-user online indicators, and handles server failovers gracefully."
+        },
+        "instructor_bio": "Ananya Deshmukh is a Principal Real-Time Systems Engineer with extensive experience building low-latency trading and chat backends.",
+        "faqs": [
+            {
+                "question": "When should I choose WebSockets over Server-Sent Events?",
+                "answer": "WebSockets are bi-directional; SSE is simpler and ideal when only the server needs to push data to clients."
+            }
+        ]
+    },
+    "terraform-infrastructure-as-code": {
+        "what_you_will_learn": [
+            "Write modular, reusable Infrastructure as Code (IaC) using HCL syntax",
+            "Manage Terraform state files safely with remote backends and state locking",
+            "Provision VPC networks, compute instances, database clusters, and IAM roles",
+            "Implement Terraform workspaces and environment separation (dev/prod)",
+            "Automate plan validation and deployment in GitHub Actions CI/CD pipelines"
+        ],
+        "prerequisites": ["Basic cloud infrastructure concepts (AWS or Azure)", "Terminal usage"],
+        "target_audience": [
+            "DevOps Engineers and Cloud Administrators adopting Infrastructure as Code",
+            "Software Engineers looking to provision self-service cloud environments"
+        ],
+        "tools_used": ["Terraform", "AWS CLI", "HCL", "GitHub Actions", "Docker"],
+        "estimated_effort": "3 hours total (1.5 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: HCL Basics & State Management",
+                "description": "Structure Terraform providers, resources, variables, and remote state.",
+                "lessons": [
+                    {
+                        "title": "Terraform Architecture & Resource Graphs",
+                        "duration_minutes": 45,
+                        "type": "Architecture Overview",
+                        "summary": "Understand resource dependencies, execution plans, and provider configuration."
+                    },
+                    {
+                        "title": "Remote State Lockouts with S3 & DynamoDB",
+                        "duration_minutes": 50,
+                        "type": "Hands-on Exercise",
+                        "summary": "Configure S3 backends with DynamoDB locking to prevent concurrent state mutation."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Modular Infrastructure & CI/CD Pipelines",
+                "description": "Build clean infrastructure modules and automate plan execution.",
+                "lessons": [
+                    {
+                        "title": "Designing Reusable Terraform Modules",
+                        "duration_minutes": 45,
+                        "type": "Code Workshop",
+                        "summary": "Encapsulate complex VPC and database setups into versioned, typed modules."
+                    },
+                    {
+                        "title": "Automating Terraform in GitHub Actions",
+                        "duration_minutes": 50,
+                        "type": "CI/CD Lab",
+                        "summary": "Run pull-request `terraform plan` previews and automated `apply` jobs upon merge."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Production Multi-Tier Cloud Environment Provisioner",
+            "description": "Create a modular Terraform repository that provisions a secure multi-region VPC, container registry, database cluster, and automated CI/CD pipeline."
+        },
+        "instructor_bio": "Soren Madsen is a Senior Cloud Infrastructure Architect with 12+ years of experience automating enterprise cloud migrations.",
+        "faqs": [
+            {
+                "question": "Which cloud provider is used for demonstration?",
+                "answer": "Lessons primarily use AWS, but all HCL modular concepts apply equally to Azure and GCP."
+            }
+        ]
+    },
+    "serverless-architectures-on-aws": {
+        "what_you_will_learn": [
+            "Architect event-driven serverless backends using AWS Lambda, API Gateway, and SQS",
+            "Design asynchronous event workflows using AWS EventBridge event buses",
+            "Optimize Lambda function cold-start latency and memory allocation",
+            "Implement Dead Letter Queues (DLQ) and retry policies for failed executions",
+            "Deploy serverless applications repeatably using AWS SAM or Serverless Framework"
+        ],
+        "prerequisites": ["Basic AWS knowledge", "Python or Node.js development experience"],
+        "target_audience": [
+            "Cloud Architects building cost-effective, auto-scaling web backends",
+            "Software Engineers replacing traditional server instances with serverless functions"
+        ],
+        "tools_used": ["AWS Lambda", "API Gateway", "EventBridge", "DynamoDB", "AWS SAM", "Python 3.11"],
+        "estimated_effort": "3.5 hours total (1.75 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Serverless Compute & Event Routing",
+                "description": "Master AWS Lambda runtime limits, triggers, and EventBridge buses.",
+                "lessons": [
+                    {
+                        "title": "AWS Lambda Lifecycles & Cold Start Mitigations",
+                        "duration_minutes": 50,
+                        "type": "Deep Dive",
+                        "summary": "Optimize package sizes, provisioned concurrency, and connection reuse."
+                    },
+                    {
+                        "title": "EventBridge Bus Design & Pattern Filtering",
+                        "duration_minutes": 55,
+                        "type": "Code Workshop",
+                        "summary": "Route application events asynchronously between independent microservices."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Resilience, Data Persistence & Infrastructure",
+                "description": "Connect DynamoDB single-table stores and handle execution retries.",
+                "lessons": [
+                    {
+                        "title": "DynamoDB Single-Table Design for Serverless",
+                        "duration_minutes": 50,
+                        "type": "Hands-on Exercise",
+                        "summary": "Structure primary keys, GSI indexes, and transactional queries for high QPS."
+                    },
+                    {
+                        "title": "DLQ Error Trapping & Infrastructure as Code",
+                        "duration_minutes": 55,
+                        "type": "Deployment Lab",
+                        "summary": "Define SAM template infrastructure and configure SQS dead-letter queues."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Serverless Order Processing & Notification System",
+            "description": "Build an asynchronous e-commerce order engine featuring API Gateway triggers, Lambda validation workers, EventBridge routing, and SQS error-recovery queues."
+        },
+        "instructor_bio": "Brenda Vance is a Serverless Hero and Cloud Solutions Architect who has designed serverless platforms serving millions of daily requests.",
+        "faqs": [
+            {
+                "question": "Do I need an active AWS account to follow along?",
+                "answer": "Yes, a free-tier AWS account is sufficient for completing all course exercises."
+            }
+        ]
+    },
+    "cloud-security-posture-management": {
+        "what_you_will_learn": [
+            "Enforce continuous compliance across cloud environments (AWS/GCP/Azure)",
+            "Write custom Open Policy Agent (OPA) and Rego rules for IaC misconfiguration audits",
+            "Detect unencrypted storage buckets, exposed security groups, and wild-card IAM policies",
+            "Implement automated remediation workflows for cloud security violations",
+            "Monitor identity access management (IAM) entitlement drift across cloud accounts"
+        ],
+        "prerequisites": ["Basic cloud infrastructure understanding (AWS/Azure/GCP)", "Cybersecurity fundamentals"],
+        "target_audience": [
+            "Cloud Security Engineers defending multi-account cloud estates",
+            "DevOps Engineers integrating automated security checks into CI/CD"
+        ],
+        "tools_used": ["Open Policy Agent (OPA)", "Rego", "Trivy", "AWS Security Hub", "Python"],
+        "estimated_effort": "3.5 hours total (1.75 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Cloud Risks & Policy as Code",
+                "description": "Identify common cloud vulnerabilities and write declarative Rego policies.",
+                "lessons": [
+                    {
+                        "title": "Anatomy of Cloud Security Misconfigurations",
+                        "duration_minutes": 50,
+                        "type": "Case Studies",
+                        "summary": "Analyze high-profile breaches caused by public storage buckets and permissive IAM roles."
+                    },
+                    {
+                        "title": "Writing OPA Rego Policies for IaC Scans",
+                        "duration_minutes": 50,
+                        "type": "Code Workshop",
+                        "summary": "Write policy-as-code rules to block insecure Terraform plans during CI execution."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Continuous Auditing & Auto-Remediation",
+                "description": "Deploy automated compliance scanners and auto-fix security alerts.",
+                "lessons": [
+                    {
+                        "title": "IAM Privilege Creep & Least-Privilege Enforcement",
+                        "duration_minutes": 50,
+                        "type": "Hands-on Exercise",
+                        "summary": "Audit active cloud credentials to prune unused permissions and over-privileged policies."
+                    },
+                    {
+                        "title": "Building Automated Remediation Workflows",
+                        "duration_minutes": 50,
+                        "type": "Security Lab",
+                        "summary": "Trigger automated Lambda bots to revoke public bucket access upon policy violations."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Automated Cloud Compliance Guardrail System",
+            "description": "Implement a full CSPM pipeline that scans Terraform templates with OPA Rego policies, flags public exposure risks, and triggers auto-remediation scripts."
+        },
+        "instructor_bio": "Dimitri Volkov is a Lead Cloud Security Architect with deep expertise in multi-cloud compliance and policy-as-code automation.",
+        "faqs": [
+            {
+                "question": "What policy language is used for writing security guardrails?",
+                "answer": "The course uses Rego (Open Policy Agent standard), which is widely adopted across Kubernetes and Cloud IaC toolchains."
+            }
+        ]
+    },
+    "zero-trust-network-architecture": {
+        "what_you_will_learn": [
+            "Implement 'Never Trust, Always Verify' principles across corporate networks",
+            "Design identity-aware proxies (IAP) to replace legacy VPN perimeters",
+            "Enforce microsegmentation policies between backend microservices",
+            "Verify device posture health dynamically before granting resource access",
+            "Implement mTLS (Mutual TLS) authentication for inter-service communication"
+        ],
+        "prerequisites": ["Networking basics (IPs, Subnets, TLS/SSL)", "Basic understanding of authentication"],
+        "target_audience": [
+            "Network Security Engineers modernizing perimeter security",
+            "Systems Engineers securing remote employee access and microservices"
+        ],
+        "tools_used": ["WireGuard", "Envoy Proxy", "Smallstep CA", "Python 3.11", "Docker"],
+        "estimated_effort": "2.5 hours total (1.25 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Zero Trust Core Principles & Identity Proxies",
+                "description": "Deconstruct perimeter defenses and deploy Identity-Aware Proxies.",
+                "lessons": [
+                    {
+                        "title": "Perimeter Security Failures vs. Zero Trust Architecture",
+                        "duration_minutes": 40,
+                        "type": "Architecture Overview",
+                        "summary": "Analyze why internal networks can no longer be assumed trustworthy."
+                    },
+                    {
+                        "title": "Identity-Aware Proxy Configuration",
+                        "duration_minutes": 40,
+                        "type": "Code Workshop",
+                        "summary": "Route HTTP requests through identity verification proxies with JWT assertion headers."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Microsegmentation & Mutual TLS (mTLS)",
+                "description": "Encrypt and authenticate service-to-service communication.",
+                "lessons": [
+                    {
+                        "title": "Service Microsegmentation & Policy Guards",
+                        "duration_minutes": 40,
+                        "type": "Hands-on Exercise",
+                        "summary": "Enforce strict network isolation rules between database instances and app servers."
+                    },
+                    {
+                        "title": "Configuring Automatic mTLS with Envoy",
+                        "duration_minutes": 45,
+                        "type": "Security Lab",
+                        "summary": "Issue ephemeral X.509 client certificates to establish mutual TLS between microservices."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Zero Trust Private Application Access Gateway",
+            "description": "Build an identity-authenticated gateway service that verifies user identity, checks device posture tokens, and opens mTLS tunnels to internal web applications."
+        },
+        "instructor_bio": "Sarah Jenkins is a Senior Cybersecurity Consultant specializing in Zero Trust network transformations for distributed remote engineering organizations.",
+        "faqs": [
+            {
+                "question": "Can I set up the mTLS hands-on lab locally using Docker?",
+                "answer": "Yes! All mTLS and proxy labs run locally using Docker containers and Smallstep PKI tools."
+            }
+        ]
+    },
+    "ai-product-roadmap-strategy": {
+        "what_you_will_learn": [
+            "Structure AI product roadmaps that balance feasibility, risk, and impact",
+            "Define non-deterministic success criteria for probabilistic AI features",
+            "Evaluate build vs. buy decisions for LLMs, fine-tuning, and hosted APIs",
+            "Conduct ROI calculations considering API costs, latency, and human-in-the-loop review",
+            "Communicate AI capability limits and model uncertainty effectively to executives"
+        ],
+        "prerequisites": ["Basic product management experience", "Familiarity with AI product terminology"],
+        "target_audience": [
+            "Technical Product Managers building LLM-powered features",
+            "Product Leaders establishing AI product strategies"
+        ],
+        "tools_used": ["Product Roadmapping Tools", "Miro", "Excel/Notion", "API Cost Calculators"],
+        "estimated_effort": "2 hours total (1 hr/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: AI Feasibility & Value Proposition",
+                "description": "Screen AI ideas for feasibility, unit economics, and user impact.",
+                "lessons": [
+                    {
+                        "title": "The AI Feature Feasibility Framework",
+                        "duration_minutes": 35,
+                        "type": "Interactive Strategy",
+                        "summary": "Categorize product ideas into simple prompts, complex RAG, or autonomous agents."
+                    },
+                    {
+                        "title": "Unit Economics & API Cost Modeling",
+                        "duration_minutes": 35,
+                        "type": "Exercise & Workshop",
+                        "summary": "Calculate monthly API token consumption, latency trade-offs, and gross margin impact."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Roadmapping Under Uncertainty & Execution",
+                "description": "Structure milestones that adapt as AI capabilities evolve.",
+                "lessons": [
+                    {
+                        "title": "Probabilistic Roadmap Milestones",
+                        "duration_minutes": 35,
+                        "type": "Case Study Analysis",
+                        "summary": "Set objective key results (OKRs) for AI accuracy instead of rigid feature output dates."
+                    },
+                    {
+                        "title": "Managing Executive Expectations",
+                        "duration_minutes": 35,
+                        "type": "Roleplay & Review",
+                        "summary": "Draft clear documentation explaining model accuracy ceilings, edge cases, and safety bounds."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Enterprise AI Product Roadmap & Business Case",
+            "description": "Construct a comprehensive 12-month AI feature roadmap complete with feasibility scoring, API cost projections, risk mitigation plans, and executive presentation slides."
+        },
+        "instructor_bio": "Karan Malhotra is a Vice President of Product Management who has led AI product transformations for global SaaS companies.",
+        "faqs": [
+            {
+                "question": "Is technical coding required for this product course?",
+                "answer": "No. The focus is on strategic product management, unit economics, and feature feasibility estimation."
+            }
+        ]
+    },
+    "growth-product-management-essentials": {
+        "what_you_will_learn": [
+            "Map acquisition, activation, retention, and monetization product funnels",
+            "Identify activation 'Aha!' moments using user behavioral cohort data",
+            "Design friction-free user onboarding experiences that accelerate time-to-value",
+            "Formulate rapid A/B growth experiment hypotheses with clear statistical goals",
+            "Reduce customer churn using targeted retention loops and re-engagement triggers"
+        ],
+        "prerequisites": ["Basic product management or marketing analytics interest"],
+        "target_audience": [
+            "Growth Product Managers seeking to optimize product growth funnels",
+            "Founders and Product Marketers scaling user acquisition and retention"
+        ],
+        "tools_used": ["Mixpanel", "Amplitude", "Figma", "Google Analytics 4", "Excel"],
+        "estimated_effort": "2 hours total (1 hr/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Funnel Mapping & Activation Optimization",
+                "description": "Deconstruct user journey funnels and find activation milestones.",
+                "lessons": [
+                    {
+                        "title": "Mapping the Pirate Metrics (AARRR) Funnel",
+                        "duration_minutes": 30,
+                        "type": "Strategy Overview",
+                        "summary": "Analyze conversion drop-offs between landing visits, signups, and core feature usage."
+                    },
+                    {
+                        "title": "Uncovering the Onboarding Activation Milestone",
+                        "duration_minutes": 30,
+                        "type": "Data Workshop",
+                        "summary": "Inspect retention curves to isolate the early user actions that predict long-term retention."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Growth Experimentation & Retention Loops",
+                "description": "Run rapid product experiments and build habit-forming product loops.",
+                "lessons": [
+                    {
+                        "title": "Designing High-Velocity Growth Experiments",
+                        "duration_minutes": 30,
+                        "type": "Case Study",
+                        "summary": "Prioritize experiment backlogs using the ICE (Impact, Confidence, Ease) scoring model."
+                    },
+                    {
+                        "title": "Habit Loops & Re-Engagement Triggers",
+                        "duration_minutes": 30,
+                        "type": "Product Design",
+                        "summary": "Design contextual email digests, push notifications, and in-app triggers."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "SaaS Product Onboarding Conversion & Retention Audit",
+            "description": "Analyze user funnel metrics for a sample SaaS app, identify activation bottlenecks, design an optimized onboarding flow, and write 3 high-impact growth experiment specs."
+        },
+        "instructor_bio": "Emma Watson is a Growth Advisor and former Head of Growth who has scaled user acquisition for multiple Series-B tech startups.",
+        "faqs": [
+            {
+                "question": "What product analytics tools are referenced?",
+                "answer": "Lessons demonstrate patterns in Mixpanel and Amplitude, but principles apply to any analytics stack."
+            }
+        ]
+    },
+    "advanced-motion-design-for-web-interfaces": {
+        "what_you_will_learn": [
+            "Craft fluid UI animations using Framer Motion, CSS transitions, and Web Animations API",
+            "Apply easing curves (cubic-bezier, physics springs) for natural visual feel",
+            "Build gesture-driven UI components (swipeable cards, drag-and-drop, modals)",
+            "Orchestrate complex multi-element staggered enter/exit transitions",
+            "Implement accessible reduced-motion (`prefers-reduced-motion`) fallbacks"
+        ],
+        "prerequisites": ["HTML, CSS, and basic JavaScript/React proficiency"],
+        "target_audience": [
+            "UI Designers and Frontend Developers wanting to create captivating web micro-interactions",
+            "Design System Engineers crafting animated component libraries"
+        ],
+        "tools_used": ["Framer Motion", "CSS3", "JavaScript", "React", "Figma"],
+        "estimated_effort": "2.5 hours total (1.25 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Physics Springs & CSS Animation Timing",
+                "description": "Understand spring physics, cubic-bezier curves, and hardware acceleration.",
+                "lessons": [
+                    {
+                        "title": "Spring Physics vs. Linear Duration Timing",
+                        "duration_minutes": 40,
+                        "type": "Visual Workshop",
+                        "summary": "Compare stiffness, damping, and mass parameters for responsive spring motion."
+                    },
+                    {
+                        "title": "Hardware Acceleration & Composite Layers",
+                        "duration_minutes": 40,
+                        "type": "Performance Lab",
+                        "summary": "Animate only `transform` and `opacity` properties to maintain 60fps rendering without layout recalculations."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Gesture Control & Enter/Exit Staggers",
+                "description": "Build interactive gesture controls and multi-element page transitions.",
+                "lessons": [
+                    {
+                        "title": "Framer Motion Gesture Hooks & Drag Interactivity",
+                        "duration_minutes": 40,
+                        "type": "Code Workshop",
+                        "summary": "Implement smooth drag-to-dismiss panels and velocity-sensitive spring releases."
+                    },
+                    {
+                        "title": "Staggered Micro-Interactions & Reduced Motion",
+                        "duration_minutes": 40,
+                        "type": "Accessibility Lab",
+                        "summary": "Stagger list item appearances and respect user `prefers-reduced-motion` browser preferences."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Fluid Glassmorphism Widget & Interaction Suite",
+            "description": "Build an interactive UI component suite featuring floating glass cards, gesture-driven drag controls, physics-based springs, and full reduced-motion accessibility."
+        },
+        "instructor_bio": "Leo Martinez is an Award-winning UI Motion Designer who creates high-end interactive visual experiences for modern tech brands.",
+        "faqs": [
+            {
+                "question": "Is Framer Motion required or can I use Vanilla CSS?",
+                "answer": "Exercises demonstrate both Framer Motion for React and Vanilla CSS/JS Web Animations API."
+            }
+        ]
+    },
+    "design-systems-for-enterprise-apps": {
+        "what_you_will_learn": [
+            "Structure design tokens (color, spacing, typography, elevation) in JSON/CSS variables",
+            "Architect reusable, accessible component libraries (data tables, forms, modals)",
+            "Enforce strict WCAG 2.1 AA accessibility standards across design components",
+            "Document design token guidelines and component states in Storybook",
+            "Govern design system contributions across large multi-team engineering orgs"
+        ],
+        "prerequisites": ["HTML/CSS proficiency", "Basic familiarity with Figma and React/Vue"],
+        "target_audience": [
+            "Design System Engineers and UI Designers building enterprise component libraries",
+            "Frontend Architects establishing organizational design standards"
+        ],
+        "tools_used": ["Figma", "CSS Variables", "Storybook", "React", "Style Dictionary"],
+        "estimated_effort": "3 hours total (1.5 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Design Tokens & Component Boundaries",
+                "description": "Construct token hierarchies and decouple visual decisions from raw code.",
+                "lessons": [
+                    {
+                        "title": "Global, Alias & Component Specific Tokens",
+                        "duration_minutes": 45,
+                        "type": "System Design",
+                        "summary": "Build a design token pipeline using Style Dictionary to export CSS variables and JSON tokens."
+                    },
+                    {
+                        "title": "Designing Complex Enterprise Data Tables",
+                        "duration_minutes": 45,
+                        "type": "Code Workshop",
+                        "summary": "Construct accessible, customizable data table components supporting sorting, filtering, and pagination."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Storybook Documentation & Governance",
+                "description": "Document component APIs and establish contribution workflows.",
+                "lessons": [
+                    {
+                        "title": "Storybook Component Isolation & Accessibility Scans",
+                        "duration_minutes": 45,
+                        "type": "Documentation Lab",
+                        "summary": "Set up Storybook stories with automated axe-core accessibility testing."
+                    },
+                    {
+                        "title": "Versioning & Multi-Team Governance",
+                        "duration_minutes": 45,
+                        "type": "Strategy Session",
+                        "summary": "Establish semantic versioning rules, breaking-change deprecation notices, and design review boards."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Enterprise Design System Core Token & Component Package",
+            "description": "Build an enterprise design system package featuring automated token translation, 10 fully tested React components in Storybook, and zero accessibility violations."
+        },
+        "instructor_bio": "Teresa Zhang is a Lead Design System Architect who has built component libraries used by over 500 enterprise engineers.",
+        "faqs": [
+            {
+                "question": "Can this system be used with plain CSS as well as React?",
+                "answer": "Yes! Design tokens are defined in JSON and compiled to standard CSS variables."
+            }
+        ]
+    },
+    "executive-financial-modeling-and-analysis": {
+        "what_you_will_learn": [
+            "Build dynamic three-statement financial models (Income Statement, Balance Sheet, Cash Flow)",
+            "Calculate key unit economic metrics: CAC, LTV, Magic Number, and Net Revenue Retention",
+            "Perform multi-scenario sensitivity analyses and Monte Carlo cash flow simulations",
+            "Structure debt amortization schedules and cap tables",
+            "Present financial forecasts cleanly to board members and venture investors"
+        ],
+        "prerequisites": ["Proficiency in Microsoft Excel or Google Sheets", "Basic accounting concepts"],
+        "target_audience": [
+            "Finance Managers, Operations Leads, and Founders managing company financial strategy",
+            "Business Analysts building corporate financial forecasts"
+        ],
+        "tools_used": ["Excel", "Google Sheets", "Python 3.11", "OpenPyXL"],
+        "estimated_effort": "3 hours total (1.5 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Three-Statement Modeling & Unit Economics",
+                "description": "Link core financial statements and calculate SaaS unit economics.",
+                "lessons": [
+                    {
+                        "title": "Linking Income Statement, Balance Sheet & Cash Flow",
+                        "duration_minutes": 45,
+                        "type": "Financial Modeling",
+                        "summary": "Connect dynamic working capital, depreciation, and net income lines seamlessly."
+                    },
+                    {
+                        "title": "SaaS Unit Economics & LTV/CAC Modeling",
+                        "duration_minutes": 50,
+                        "type": "Hands-on Exercise",
+                        "summary": "Calculate gross margin adjusted LTV, CAC payback periods, and net expansion churn."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Sensitivity Analysis & Executive Reporting",
+                "description": "Perform stress testing under optimistic, baseline, and pessimistic scenarios.",
+                "lessons": [
+                    {
+                        "title": "Scenario Planning & Data Table Sensitivity",
+                        "duration_minutes": 45,
+                        "type": "Spreadsheet Workshop",
+                        "summary": "Build two-way Excel data tables to model cash runway under varying churn rates."
+                    },
+                    {
+                        "title": "Executive Financial Dashboarding",
+                        "duration_minutes": 50,
+                        "type": "Presentation Lab",
+                        "summary": "Format financial metrics into clean, executive-ready charts and summary tables."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Series-A SaaS Company 3-Year Financial Model",
+            "description": "Construct a fully dynamic 36-month financial model for a growing SaaS business featuring 3-statement linking, sensitivity tables, and investor deck summary charts."
+        },
+        "instructor_bio": "Richard Sterling is a former Tech CFO and Investment Banker with 20+ years of corporate finance and valuation experience.",
+        "faqs": [
+            {
+                "question": "Do I need complex macro programming (VBA) skills?",
+                "answer": "No. Models rely on clean, dynamic spreadsheet formulas and optional Python openpyxl scripts."
+            }
+        ]
+    },
+    "cohort-analysis-and-customer-lifetime-value": {
+        "what_you_will_learn": [
+            "Construct customer acquisition cohort tables using SQL and Python",
+            "Model retention decay curves (power-law, exponential) to project long-term retention ceilings",
+            "Calculate historic and predictive Customer Lifetime Value (LTV)",
+            "Identify high-value customer personas based on behavioral purchasing patterns",
+            "Build automated churn risk scoring algorithms"
+        ],
+        "prerequisites": ["Basic SQL knowledge", "Python intermediate proficiency (Pandas)"],
+        "target_audience": [
+            "Data Analysts evaluating subscription and e-commerce business health",
+            "Product Marketers optimizing customer retention campaigns"
+        ],
+        "tools_used": ["Python 3.11", "Pandas", "SQL", "Lifetimes Library", "Matplotlib"],
+        "estimated_effort": "2.5 hours total (1.25 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Cohort Tables & Retention Curve Fitting",
+                "description": "Transform transaction logs into readable cohort retention matrices.",
+                "lessons": [
+                    {
+                        "title": "Building SQL & Python Cohort Heatmaps",
+                        "duration_minutes": 40,
+                        "type": "Code Workshop",
+                        "summary": "Group users by signup month and track active user percentages across 12 periods."
+                    },
+                    {
+                        "title": "Fitting Retention Curves & Projecting Ceilings",
+                        "duration_minutes": 35,
+                        "type": "Statistical Analysis",
+                        "summary": "Fit non-linear curves to estimate whether retention flattens into long-term product habituation."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: LTV Modeling & Churn Prediction",
+                "description": "Predict future purchase behavior and build early churn risk models.",
+                "lessons": [
+                    {
+                        "title": "Predictive LTV with BG/NBD Models",
+                        "duration_minutes": 35,
+                        "type": "Practical Lab",
+                        "summary": "Use the Lifetimes package to estimate future transaction frequency and monetary value."
+                    },
+                    {
+                        "title": "Early Churn Risk Trigger Identification",
+                        "duration_minutes": 40,
+                        "type": "Analytics Exercise",
+                        "summary": "Flag users showing sharp declines in session frequency before subscription cancellation."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Subscription Customer Retention & LTV Diagnostic Suite",
+            "description": "Ingest 50,000 purchase logs, build interactive cohort heatmaps, project 3-year LTV for key customer segments, and output a churn risk alert list."
+        },
+        "instructor_bio": "Alisha Fernandez is a Customer Analytics Director with extensive expertise in subscription business metrics and quantitative retention modeling.",
+        "faqs": [
+            {
+                "question": "Does this course cover non-subscription e-commerce cohorts?",
+                "answer": "Yes! We cover both contractual (subscription) and non-contractual (e-commerce repeat order) cohort models."
+            }
+        ]
+    },
+    "gitops-pipelines-with-argocd-and-flux": {
+        "what_you_will_learn": [
+            "Implement declarative Kubernetes continuous delivery using ArgoCD and Flux v2",
+            "Maintain cluster state using Git repositories as the single source of truth",
+            "Manage multi-environment configurations using Kustomize overlays and Helm charts",
+            "Execute automated canary deployments and progressive rollouts with Argo Rollouts",
+            "Detect and automatically reconcile manual cluster drift"
+        ],
+        "prerequisites": ["Kubernetes administration basics (kubectl, YAML manifests)", "Git usage"],
+        "target_audience": [
+            "DevOps Engineers modernizing Kubernetes deployment pipelines",
+            "Platform Engineers building automated, self-healing cluster delivery systems"
+        ],
+        "tools_used": ["ArgoCD", "Flux v2", "Kubernetes", "Kustomize", "Helm", "Git"],
+        "estimated_effort": "3.5 hours total (1.75 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Declarative GitOps Core & ArgoCD Setup",
+                "description": "Understand pull-based deployment models and configure ArgoCD operators.",
+                "lessons": [
+                    {
+                        "title": "Pull-Based Delivery vs. Push-Based CI Pipelines",
+                        "duration_minutes": 50,
+                        "type": "Architecture Overview",
+                        "summary": "Learn why cluster agents fetching Git state outperform long-lived CI script credentials."
+                    },
+                    {
+                        "title": "Deploying ArgoCD & Application CRD Manifests",
+                        "duration_minutes": 60,
+                        "type": "Hands-on Exercise",
+                        "summary": "Configure ArgoCD custom resource definitions to monitor Git repos for manifest changes."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Multi-Environment Overlays & Progressive Rollouts",
+                "description": "Structure Kustomize overlays and execute zero-downtime canary deployments.",
+                "lessons": [
+                    {
+                        "title": "Kustomize Overlays for Staging & Production",
+                        "duration_minutes": 50,
+                        "type": "Code Workshop",
+                        "summary": "Separate environment parameters clean without duplicating base Kubernetes manifests."
+                    },
+                    {
+                        "title": "Canary Releases with Argo Rollouts & Prometheus Metrics",
+                        "duration_minutes": 50,
+                        "type": "Deployment Lab",
+                        "summary": "Automate gradual 10% -> 50% -> 100% traffic shifting with automatic rollback on elevated error rates."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Self-Healing GitOps Kubernetes CD Pipeline",
+            "description": "Configure an ArgoCD GitOps repository managing a multi-service web application complete with Kustomize environment overlays, automated drift reconciliation, and progressive canary rollouts."
+        },
+        "instructor_bio": "Eirik Solberg is a Senior Cloud Native Engineer and Kubernetes contributor who has implemented GitOps for large financial enterprise clusters.",
+        "faqs": [
+            {
+                "question": "Can I run the Kubernetes GitOps lab on a local cluster?",
+                "answer": "Yes! All exercises are designed to run locally using Minikube or Kind (Kubernetes in Docker)."
+            }
+        ]
+    },
+    "site-reliability-engineering-practices": {
+        "what_you_will_learn": [
+            "Formulate meaningful Service Level Indicators (SLIs) and Service Level Objectives (SLOs)",
+            "Manage error budgets to balance rapid feature delivery with system stability",
+            "Design actionable error budget burn rate alert policies",
+            "Identify, measure, and automate operational toil out of daily workflows",
+            "Conduct blameless post-mortem incident retrospectives that drive architectural fixes"
+        ],
+        "prerequisites": ["Basic understanding of web backend operations and monitoring"],
+        "target_audience": [
+            "SREs and Operations Engineers formalizing reliability practices",
+            "Engineering Managers adopting Google SRE framework principles"
+        ],
+        "tools_used": ["Prometheus", "Grafana", "Python 3.11", "PagerDuty", "Yaml"],
+        "estimated_effort": "3 hours total (1.5 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: SLIs, SLOs & Error Budget Governance",
+                "description": "Quantify user experience expectations into measurable service level objectives.",
+                "lessons": [
+                    {
+                        "title": "Defining Meaningful SLIs & Target SLOs",
+                        "duration_minutes": 45,
+                        "type": "Strategy Session",
+                        "summary": "Select availability and latency metrics that directly correlate with user satisfaction."
+                    },
+                    {
+                        "title": "Error Budget Calculation & Policy Enforcement",
+                        "duration_minutes": 45,
+                        "type": "Hands-on Exercise",
+                        "summary": "Calculate monthly error budgets and establish freezes when budgets are exhausted."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Burn-Rate Alerting & Toil Automation",
+                "description": "Build non-fatiguing alert rules and eliminate repetitive manual toil.",
+                "lessons": [
+                    {
+                        "title": "Multi-Window Multi-Burn-Rate Alerting",
+                        "duration_minutes": 45,
+                        "type": "Alerting Lab",
+                        "summary": "Configure Prometheus alert rules that fire only when error budgets burn at dangerous rates."
+                    },
+                    {
+                        "title": "Toil Audit & Automation Blueprinting",
+                        "duration_minutes": 45,
+                        "type": "Code Workshop",
+                        "summary": "Identify repetitive manual tasks and replace them with self-healing Python scripts."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Production Service SLO Framework & Blameless Post-Mortem",
+            "description": "Define complete SLI/SLO specs for a multi-service web backend, configure Grafana error budget dashboards, write multi-burn rate alerts, and author a blameless post-mortem report."
+        },
+        "instructor_bio": "Naomi Takahashi is a Lead SRE Consultant who has spent over 12 years building reliable infrastructure systems for high-availability tech companies.",
+        "faqs": [
+            {
+                "question": "Are these practices based on Google SRE principles?",
+                "answer": "Yes! The course adapts Google SRE principles into practical patterns for teams of any size."
+            }
+        ]
+    },
+    "cloud-cost-optimization-and-finops": {
+        "what_you_will_learn": [
+            "Establish FinOps frameworks to track, allocate, and optimize cloud infrastructure spending",
+            "Implement mandatory cloud tagging policies and cost-center allocation dashboards",
+            "Identify idle compute resources, over-provisioned databases, and orphaned storage disks",
+            "Evaluate Reserved Instance (RI), Savings Plans, and Spot Instance purchasing strategies",
+            "Build automated cloud cost anomaly detection and alerting bots"
+        ],
+        "prerequisites": ["Basic cloud infrastructure understanding (AWS/Azure/GCP)"],
+        "target_audience": [
+            "DevOps Engineers and Engineering Managers reducing cloud cloud infrastructure bills",
+            "FinOps Practitioners managing corporate cloud cost governance"
+        ],
+        "tools_used": ["AWS Cost Explorer", "Python 3.11", "CloudWatch", "Grafana", "Terraform"],
+        "estimated_effort": "2.5 hours total (1.25 hrs/week over 2 weeks)",
+        "curriculum": [
+            {
+                "title": "Module 1: Cloud Cost Visibility & Allocation Tagging",
+                "description": "Gain 100% visibility into multi-cloud spending and enforce allocation tags.",
+                "lessons": [
+                    {
+                        "title": "Cost Allocation Tag Strategies & Governance",
+                        "duration_minutes": 35,
+                        "type": "Policy Workshop",
+                        "summary": "Enforce mandatory tags for environment, owner, and cost-center using Terraform policies."
+                    },
+                    {
+                        "title": "Building Executive Cloud Cost Dashboards",
+                        "duration_minutes": 40,
+                        "type": "Hands-on Exercise",
+                        "summary": "Export cloud billing data into interactive Grafana dashboards grouped by team and product."
+                    }
+                ]
+            },
+            {
+                "title": "Module 2: Right-Sizing, Spot Scaling & Cost Automation",
+                "description": "Eliminate resource waste and automate cloud cost reduction policies.",
+                "lessons": [
+                    {
+                        "title": "Compute & Database Right-Sizing Audits",
+                        "duration_minutes": 35,
+                        "type": "Optimization Lab",
+                        "summary": "Analyze CPU/RAM metrics to downsize over-provisioned instances without sacrificing uptime."
+                    },
+                    {
+                        "title": "Automating Off-Hours Shutdown Bots",
+                        "duration_minutes": 40,
+                        "type": "Code Workshop",
+                        "summary": "Deploy Python Lambda scripts that shut down non-production development environments during off-hours."
+                    }
+                ]
+            }
+        ],
+        "final_project": {
+            "title": "Enterprise Cloud Cost Reduction Audit & Automation Bot",
+            "description": "Perform a complete cost audit on a sample cloud account, identify 30%+ waste reduction opportunities, and deploy an automated resource shutdown bot."
+        },
+        "instructor_bio": "Marcus Thorne is a Certified FinOps Practitioner and Cloud Systems Architect who has saved companies millions in annual cloud expenditure.",
+        "faqs": [
+            {
+                "question": "Which cloud providers are covered in this course?",
+                "answer": "Primary examples use AWS, but the FinOps principles and tag governance models apply to AWS, Azure, and GCP."
+            }
+        ]
     }
 }
 

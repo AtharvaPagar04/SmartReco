@@ -94,7 +94,7 @@
     rows.forEach(([title, name]) => {
       const item = document.createElement('div'); item.className = 'review-item'; const strong = document.createElement('strong'); strong.textContent = title; const text = document.createElement('span');
       const checked = [...form.querySelectorAll(`[name="${name}"]:checked`)].map(input => input.closest('label')?.querySelector('strong')?.textContent || input.value);
-      text.textContent = name === 'weekly_hours' ? `${form.elements[name].value || '0'} hours/week` : name === 'optional_instruction' ? (form.elements[name].value || 'None') : name === 'path_length' ? ({FOCUSED: 'Focused path — 3 courses', EXTENDED: 'Extended path — 4 courses', AUTO: 'Let SmartReco decide — 3–4 courses'}[form.elements[name].value] || 'Let SmartReco decide — 3–4 courses') : checked.join(', ') || 'Not selected'; item.append(strong, text); target.append(item);
+      text.textContent = name === 'weekly_hours' ? `${form.elements[name].value || '0'} hours/week` : name === 'optional_instruction' ? (form.elements[name].value || 'None') : name === 'path_length' ? ({FOCUSED: 'Focused path — 3–4 courses', BALANCED: 'Balanced path — 6–7 courses', EXTENDED: 'Deep path — 8 courses', DEEP: 'Deep path — 8 courses', AUTO: 'Let SmartReco decide — 3–8 courses'}[form.elements[name].value] || 'Let SmartReco decide — 3–8 courses') : checked.join(', ') || 'Not selected'; item.append(strong, text); target.append(item);
     });
   }
 

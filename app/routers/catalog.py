@@ -12,7 +12,7 @@ from app.database import get_db
 from app.dependencies import get_user
 from app.flash import flash
 from app.models import Course, CourseEntitlement, Enrollment, User
-from app.repositories.enrollments import course_ids_for_user, courses_for_user, enrollment_for_user, touch_enrollment
+from app.repositories.enrollments import complete_enrollment, course_ids_for_user, courses_for_user, enrollment_for_user, touch_enrollment
 from app.repositories.courses import public_by_slug
 from app.routers.helpers import page
 from app.security import current_user
@@ -23,6 +23,7 @@ from app.services.course_action_service import load_course_actions, user_access_
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
 
 
 def _related_view(item) -> dict:
@@ -103,6 +104,30 @@ async def enroll(slug: str, request: Request, user: User = Depends(get_user), db
     await mark_user_dirty(db, user.id, occurred_at=now)
     await db.commit()
     return RedirectResponse(f"/courses/{course.slug}", status_code=303)
+
+
+@router.post("/courses/{slug}/complete")
+async def complete_course(slug: str, request: Request, user: User = Depends(get_user), db: AsyncSession = Depends(get_db), csrf_token: str = Form("")):
+    validate_csrf_token(request, csrf_token)
+    course = await public_by_slug(db, slug)
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    enrollment = await enrollment_for_user(db, user.id, course.id)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if not enrollment:
+        entitlement = await db.scalar(select(CourseEntitlement).where(CourseEntitlement.user_id == user.id, CourseEntitlement.course_id == course.id))
+        if course.price > 0 and not (entitlement and entitlement.revoked_at is None):
+            flash(request, "Purchase this course before marking it complete.", "warning")
+            return RedirectResponse(f"/courses/{course.slug}", status_code=303)
+        enrollment = Enrollment(user_id=user.id, course_id=course.id, started_at=now, last_accessed_at=now)
+        db.add(enrollment)
+        await db.flush()
+    complete_enrollment(enrollment, now)
+    await mark_user_dirty(db, user.id, occurred_at=now)
+    await db.commit()
+    flash(request, f"Congratulations! You completed '{course.title}'!", "success")
+    return RedirectResponse(f"/courses/{course.slug}", status_code=303)
+
 
 
 @router.get("/courses/{slug}")
