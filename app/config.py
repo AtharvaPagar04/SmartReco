@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     recommendation_max_refinements: int = 1
     recommendation_job_batch_size: int = 10
     recommendation_lease_minutes: int = 10
+    learning_path_builder_enabled: bool = True
+    learning_path_chat_model: str = ""
+    learning_path_prompt_version: str = "1"
+    learning_path_max_candidates: int = 16
+    learning_path_max_courses: int = 4
     langsmith_tracing: bool = False
     langsmith_api_key: str = ""
     langsmith_project: str = "smartreco"

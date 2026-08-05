@@ -13,7 +13,7 @@ from app.config import settings
 from app.models import ActivityEvent, Course, CourseEntitlement, Enrollment, RecommendationItem, UserInterestProfile
 from app.repositories.recommendation_feedback import feedback_preferences_for_user
 
-MEANINGFUL_EVENTS = {"SEARCH", "COURSE_CLICK", "COURSE_VIEW", "DWELL", "FILTER_CHANGE", "RECOMMENDATION_CLICK", "RECOMMENDATION_DISMISS", "RECOMMENDATION_REJECTED"}
+MEANINGFUL_EVENTS = {"SEARCH", "COURSE_CLICK", "COURSE_VIEW", "DWELL", "FILTER_CHANGE", "RECOMMENDATION_CLICK", "RECOMMENDATION_DISMISS", "RECOMMENDATION_REJECTED", "LEARNING_PATH_GENERATED", "LEARNING_PATH_SAVED", "LEARNING_PATH_COURSE_REPLACED", "LEARNING_PATH_ARCHIVED"}
 TOKEN_RE = re.compile(r"[a-z0-9][a-z0-9+#.-]*", re.I)
 
 

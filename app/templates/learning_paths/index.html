@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}My learning paths — SmartReco{% endblock %}
+{% block content %}<section class="page-heading"><p class="eyebrow">Saved roadmaps</p><h1>My learning paths</h1><a class="button" href="/path-builder">Build another path</a></section>{% if paths %}<div class="path-list">{% for path in paths %}<a class="panel path-list__item" href="/learning-paths/{{ path.id }}"><div><h2>{{ path.title }}</h2><p>{{ path.summary }}</p></div><span>{{ path.estimated_weeks or '?' }} weeks · {{ path.total_price }} {{ path.currency }}</span></a>{% endfor %}</div>{% else %}<div class="empty"><h2>No saved paths yet</h2><p>Answer a few questions to create your first roadmap.</p></div>{% endif %}{% endblock %}

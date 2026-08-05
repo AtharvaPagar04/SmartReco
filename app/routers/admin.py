@@ -14,7 +14,7 @@ from app.csrf import validate_csrf_token
 from app.database import get_db
 from app.dependencies import get_admin
 from app.flash import flash
-from app.models import ActivityEvent, Course, RecommendationFeedback, RecommendationItem, RecommendationRun, User, VectorOutbox
+from app.models import ActivityEvent, Course, LearningPath, RecommendationFeedback, RecommendationItem, RecommendationRun, User, VectorOutbox
 from app.routers.helpers import page
 from app.schemas.course import CourseForm
 from app.repositories.vector_outbox import create as create_outbox
@@ -242,6 +242,13 @@ async def recommendation_diagnostics(request: Request, admin: User = Depends(get
     return page(request, "admin/recommendations.html", current_user=admin, runs=rows, status=status, trigger_type=trigger_type, user=user, page=page_number, page_size=page_size, total=total, pages=pages)
 
 
+@router.get("/learning-paths")
+async def learning_path_diagnostics(request: Request, admin: User = Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    from sqlalchemy.orm import selectinload
+    rows = list((await db.execute(select(LearningPath, User.email).options(selectinload(LearningPath.items)).join(User, User.id == LearningPath.user_id).order_by(LearningPath.created_at.desc()).limit(100))).all())
+    return page(request, "admin/learning_paths.html", current_user=admin, rows=rows)
+
+
 @router.get("/recommendations/{run_id}")
 async def recommendation_detail(run_id: str, request: Request, admin: User = Depends(get_admin), db: AsyncSession = Depends(get_db)):
     from sqlalchemy.orm import selectinload
@@ -257,7 +264,7 @@ async def recommendation_detail(run_id: str, request: Request, admin: User = Dep
 async def events(request: Request, admin: User = Depends(get_admin), db: AsyncSession = Depends(get_db), event_type: str = Query("", max_length=40), user_id: str = Query("", max_length=36), user: str = Query("", max_length=200), course_id: str = Query("", max_length=36), date_from: str = Query("", max_length=30), date_to: str = Query("", max_length=30), session_prefix: str = Query("", max_length=20), page_number: int = Query(1, alias="page", ge=1), page_size: int = Query(50, ge=1, le=100)):
     from datetime import date
     filters = []
-    if event_type in {"PAGE_VIEW", "COURSE_IMPRESSION", "COURSE_VIEW", "COURSE_CLICK", "SEARCH", "FILTER_CHANGE", "DWELL", "RECOMMENDATION_IMPRESSION", "RECOMMENDATION_CLICK", "RECOMMENDATION_DISMISS", "RECOMMENDATION_FEEDBACK_OPENED", "RECOMMENDATION_REJECTED", "RECOMMENDATION_REPLACEMENT_SHOWN", "ADMIN_COURSE_CREATED", "ADMIN_COURSE_UPDATED", "ADMIN_COURSE_DELETED"}:
+    if event_type in {"PAGE_VIEW", "COURSE_IMPRESSION", "COURSE_VIEW", "COURSE_CLICK", "SEARCH", "FILTER_CHANGE", "DWELL", "RECOMMENDATION_IMPRESSION", "RECOMMENDATION_CLICK", "RECOMMENDATION_DISMISS", "RECOMMENDATION_FEEDBACK_OPENED", "RECOMMENDATION_REJECTED", "RECOMMENDATION_REPLACEMENT_SHOWN", "LEARNING_PATH_GENERATED", "LEARNING_PATH_SAVED", "LEARNING_PATH_COURSE_REPLACED", "LEARNING_PATH_ARCHIVED", "ADMIN_COURSE_CREATED", "ADMIN_COURSE_UPDATED", "ADMIN_COURSE_DELETED"}:
         filters.append(ActivityEvent.event_type == event_type)
     if user_id:
         filters.append(ActivityEvent.user_id == user_id)

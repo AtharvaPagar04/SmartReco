@@ -43,10 +43,13 @@ async def current_user(request: Request, db: AsyncSession) -> User | None:
 def authenticate_session(request: Request, user: User) -> None:
     csrf = request.session.get("csrf_token")
     session_id = request.session.get("session_id")
+    path_builder_draft = request.session.get("path_builder_draft")
     request.session.clear()
     request.session.update({"user_id": user.id, "session_id": session_id, "auth_at": datetime.now(timezone.utc).isoformat()})
     if csrf:
         request.session["csrf_token"] = csrf
+    if path_builder_draft:
+        request.session["path_builder_draft"] = path_builder_draft
 
 
 def logout_session(request: Request) -> None:

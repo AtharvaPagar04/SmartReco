@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}Review your path preferences — SmartReco{% endblock %}
+{% block content %}<section class="form-page"><p class="eyebrow">Review</p><h1>Your path preferences</h1>{% if draft %}<dl class="review-list">{% for key, value in review_values.items() %}<div><dt>{{ key }}</dt><dd>{{ value }}</dd></div>{% endfor %}</dl>{% if draft.get('optional_instruction') %}<p>{{ draft.get('optional_instruction') }}</p>{% endif %}<a class="button" href="/path-builder">Edit answers</a>{% else %}<p>No draft is waiting. Start with a few guided questions.</p><a class="button" href="/path-builder">Start</a>{% endif %}</section>{% endblock %}
