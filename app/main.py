@@ -19,8 +19,10 @@ from app.services.schema_readiness_service import check_schema_readiness
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings.validate_runtime()
-    await run_migrations()
+    if settings.run_migrations_on_start:
+        await run_migrations()
     await check_schema_readiness(engine)
+
     scheduler = build_scheduler()
     scheduler.start()
     app.state.scheduler = scheduler

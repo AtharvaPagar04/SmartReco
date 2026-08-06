@@ -48,7 +48,8 @@ def test_start_production_script_contents():
 
 def test_production_postgresql_url_acceptance():
     s = Settings(database_url="postgresql://user:pass@host:5432/dbname")
-    assert s.database_url == "postgresql+psycopg://user:pass@host:5432/dbname"
+    assert s.database_url == "postgresql+asyncpg://user:pass@host:5432/dbname"
+
 
     s_asyncpg = Settings(database_url="postgresql+asyncpg://user:pass@host:5432/dbname")
     assert s_asyncpg.database_url == "postgresql+asyncpg://user:pass@host:5432/dbname"

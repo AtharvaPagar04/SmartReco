@@ -7,7 +7,6 @@ sqlalchemy==2.0.43
 greenlet==3.2.4
 alembic==1.16.4
 aiosqlite==0.21.0
-psycopg[binary]==3.2.10
 pydantic-settings==2.10.1
 qdrant-client==1.15.1
 APScheduler>=3.11,<4
@@ -20,6 +19,5 @@ python-slugify==8.0.4
 structlog==25.4.0
 langgraph==0.6.7
 langsmith==0.4.27
-pytest==8.4.1
-pytest-asyncio==1.1.0
 asyncpg==0.31.0
+

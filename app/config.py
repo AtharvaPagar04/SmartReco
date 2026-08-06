@@ -124,8 +124,9 @@ class Settings(BaseSettings):
     @classmethod
     def normalize_database_url(cls, value: str) -> str:
         if value.startswith("postgresql://"):
-            return value.replace("postgresql://", "postgresql+psycopg://", 1)
+            return value.replace("postgresql://", "postgresql+asyncpg://", 1)
         return value
+
 
     @field_validator("qdrant_mode")
     @classmethod
