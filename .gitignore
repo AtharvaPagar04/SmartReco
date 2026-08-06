@@ -19,3 +19,5 @@ htmlcov/
 .idea/
 .vscode/
 graphify-out/
+config/local.toml
+config/*.local.toml

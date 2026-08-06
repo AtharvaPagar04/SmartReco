@@ -43,7 +43,44 @@ uvicorn app.main:app --reload
 
 Set a strong `SECRET_KEY` for deployment. Mesh is optional for the catalog: without `MESH_API_KEY`, vector jobs become recoverable `FAILED` jobs with a clear configuration error. Qdrant can run locally at `QDRANT_PATH` or remotely with `QDRANT_URL` and `QDRANT_API_KEY`.
 
-## Async database and migrations
+## Configuration management
+
+SmartReco uses a layered configuration system where non-secret defaults reside in tracked TOML files, while `.env` contains only secrets and environment-specific endpoints.
+
+```text
+.env                    → Secrets and environment-specific endpoints
+config/defaults.toml    → Shared non-secret defaults and tuning parameters
+config/development.toml → Safe local development overrides
+config/production.toml  → Secure production defaults
+config/test.toml        → Isolated test defaults
+```
+
+Precedence:
+```text
+Environment variables / .env
+→ config/local.toml (untracked local development overrides, if present)
+→ config/{APP_ENV}.toml (environment-specific TOML)
+→ config/defaults.toml (shared defaults)
+→ Pydantic code defaults
+```
+
+Environment variables always override TOML settings.
+
+### Local development workflow
+
+```bash
+cp .env.example .env
+./.venv311/bin/python scripts/check_config.py
+./.venv311/bin/python -m alembic upgrade head
+./.venv311/bin/python -m uvicorn app.main:app --reload --port 8001
+```
+
+### Production deployment
+
+Set secrets directly in your hosting provider's secret manager:
+`SECRET_KEY`, `DATABASE_URL`, `MESH_API_KEY`, `QDRANT_URL`, `QDRANT_API_KEY`, `LANGSMITH_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, and SMTP credentials. Do not edit `config/production.toml` with secret credentials.
+
+
 
 `app/database.py` owns one async engine and an `async_sessionmaker` with `expire_on_commit=False`. Requests get short-lived sessions through `Depends(get_db)`. Alembic uses `async_engine_from_config`, `asyncio.run`, and `AsyncConnection.run_sync`; `alembic upgrade head` is the normal schema path. SQLite migrations use batch mode. PostgreSQL deployments should be used when multiple worker processes need concurrent vector workers.
 
@@ -187,6 +224,125 @@ Tests use an isolated SQLite database and no real Mesh, Qdrant, network, or prod
 ## Deployment
 
 Use PostgreSQL and remote Qdrant for multi-process deployments. Run migrations before starting the web service, set `SESSION_HTTPS_ONLY=true`, use a long random secret, keep `.env` out of version control, and run one dedicated scheduler process when multiple web workers are used. Do not use reload mode in production.
+
+## Docker deployment
+
+SmartReco is containerized using a multi-stage Dockerfile built on `python:3.11-slim` running as a non-root user.
+
+### Build
+
+```bash
+docker build -t smartreco:latest .
+```
+
+### Run locally
+
+```bash
+docker run --rm \
+  --env-file .env \
+  -e APP_ENV=development \
+  -p 8000:8000 \
+  smartreco:latest
+```
+
+### Health check
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+### Production architecture
+
+```text
+Custom domain
+    ↓
+Dockerized SmartReco FastAPI web service
+    ├── Managed PostgreSQL
+    ├── Qdrant Cloud
+    ├── Mesh API
+    ├── Google OAuth
+    ├── SMTP email provider
+    └── LangSmith
+```
+
+### Render deployment
+
+* **Runtime:** Docker
+* **Dockerfile path:** `./Dockerfile`
+* **Health check path:** `/health`
+* **Concurrency:** 1 web instance, 1 Uvicorn worker
+* **Environment setup:** Set secrets in Render environment variables. Do not include secrets in `render.yaml` or tracked TOML files.
+
+### Persistence warning
+
+> [!WARNING]
+> Do not use SQLite or local Qdrant storage on an ephemeral production container. Use managed PostgreSQL and remote Qdrant.
+
+### Production deployment environment example
+
+```dotenv
+APP_ENV=production
+
+SECRET_KEY=
+DATABASE_URL=postgresql+asyncpg://user:password@host:5432/dbname
+APP_BASE_URL=https://your-domain.example
+
+MESH_API_KEY=
+
+QDRANT_MODE=remote
+QDRANT_URL=https://your-qdrant-cluster.cloud.qdrant.io:6333
+QDRANT_API_KEY=
+
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=
+
+GOOGLE_AUTH_ENABLED=true
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=https://your-domain.example/auth/google/callback
+
+EMAIL_PROVIDER=smtp
+EMAIL_FROM_ADDRESS=noreply@your-domain.example
+SMTP_HOST=
+SMTP_USERNAME=
+SMTP_PASSWORD=
+
+RUN_MIGRATIONS_ON_START=true
+SEED_ON_START=false
+```
+
+### Render deployment checklist
+
+* [ ] Docker image builds
+* [ ] Production config validates
+* [ ] PostgreSQL database created
+* [ ] DATABASE_URL uses asyncpg or psycopg
+* [ ] Alembic migrations pass
+* [ ] Catalog seeded once
+* [ ] Qdrant Cloud cluster created
+* [ ] Qdrant vectors reconciled
+* [ ] Mesh API key rotated and configured
+* [ ] LangSmith key rotated and configured
+* [ ] Google client secret rotated and configured
+* [ ] OAuth callback uses final HTTPS domain
+* [ ] SMTP provider configured
+* [ ] Custom domain configured
+* [ ] TLS active
+* [ ] /health returns 200
+* [ ] /ready returns 200
+* [ ] Homepage loads
+* [ ] Static assets load
+* [ ] Local login works
+* [ ] Google login works
+* [ ] Recommendation generation works
+* [ ] Learning Path generation works
+* [ ] Cart and enrollment work
+* [ ] No raw traceback appears
+* [ ] SEED_ON_START disabled after initial seed
+* [ ] Hackathon SUBMISSION_TOKEN added
+* [ ] GitHub workflow rerun successfully
+
+
 
 ## Future handoff
 

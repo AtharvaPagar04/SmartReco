@@ -26,9 +26,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Build Docker image
+        run: docker build -t smartreco-ci:${{ github.sha }} .
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
 
       # No extra dependencies: these checks use only the Python standard library.
 

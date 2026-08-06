@@ -1,0 +1,98 @@
+# SmartReco Default Configuration
+# Checked-in non-secret application defaults and tuning parameters shared across all environments.
+
+[app]
+name = "SmartReco"
+base_url = "http://127.0.0.1:8001"
+timezone = "UTC"
+log_level = "INFO"
+
+[mesh]
+base_url = "https://api.meshapi.ai/v1"
+embedding_model = "openai/text-embedding-3-small"
+chat_model = "deepseek/deepseek-v4-flash"
+request_timeout_seconds = 30
+max_retries = 1
+total_budget_seconds = 70
+
+[embedding]
+schema_version = 1
+
+[related_courses]
+enabled = true
+limit = 2
+candidate_limit = 10
+cache_ttl_seconds = 1800
+semantic_weight = 0.60
+category_weight = 0.20
+tag_weight = 0.15
+difficulty_weight = 0.05
+timeout_seconds = 3
+
+[qdrant]
+collection = "smartreco_courses"
+vector_size = 1536
+
+[vector_sync]
+interval_seconds = 30
+batch_size = 20
+max_attempts = 5
+processing_timeout_seconds = 300
+
+[events]
+batch_max_size = 50
+metadata_max_bytes = 4096
+queue_max_size = 100
+
+[session]
+cookie_name = "smartreco_session"
+max_age_seconds = 604800
+
+[admin]
+email = "admin@smartreco.org"
+
+[recommendations]
+enabled = true
+event_window_days = 30
+signal_half_life_days = 14
+min_meaningful_events = 3
+min_signal_score = 6.0
+cooldown_minutes = 30
+ttl_hours = 6
+max_candidates = 30
+final_count = 3
+display_limit = 3
+max_refinements = 1
+job_batch_size = 10
+lease_minutes = 10
+
+[learning_path]
+builder_enabled = true
+chat_model = ""
+prompt_version = "1"
+max_candidates = 16
+max_courses = 8
+
+[langsmith]
+tracing = false
+project = "smartreco"
+endpoint = "https://api.smith.langchain.com"
+
+[email]
+provider = "console"
+from_name = "SmartReco"
+from_address = ""
+smtp_port = 587
+smtp_use_tls = true
+
+[google_auth]
+enabled = false
+oidc_discovery_url = "https://accounts.google.com/.well-known/openid-configuration"
+oauth_state_ttl_seconds = 600
+request_timeout_seconds = 10
+
+[commerce]
+payments_enabled = true
+payments_mode = "demo"
+cart_max_items = 25
+default_currency = "USD"

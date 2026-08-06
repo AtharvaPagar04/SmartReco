@@ -31,6 +31,14 @@ async def mark_user_dirty(db: AsyncSession, user_id: str, *, occurred_at: dateti
     await db.flush()
 
 
+def _to_naive(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
 async def decide(db: AsyncSession, user_id: str, *, trigger_type: str = "BEHAVIOR_THRESHOLD", force: bool = False) -> RecommendationDecision:
     if not settings.recommendations_enabled:
         return RecommendationDecision(False, "RECOMMENDATIONS_DISABLED")
@@ -40,20 +48,27 @@ async def decide(db: AsyncSession, user_id: str, *, trigger_type: str = "BEHAVIO
     if not state and force:
         return RecommendationDecision(True, "FORCED", trigger_type)
     now = now_utc()
-    if state.active_run_id and state.lease_expires_at and state.lease_expires_at > now:
+    lease_expires_at = _to_naive(state.lease_expires_at)
+    next_retry_at = _to_naive(state.next_retry_at)
+    cooldown_until = _to_naive(state.cooldown_until)
+    last_recommendation_at = _to_naive(state.last_recommendation_at)
+    last_profiled_event_at = _to_naive(state.last_profiled_event_at)
+
+    if state.active_run_id and lease_expires_at and lease_expires_at > now:
         return RecommendationDecision(False, "RUN_ALREADY_ACTIVE")
-    if state.next_retry_at and state.next_retry_at > now:
+    if next_retry_at and next_retry_at > now:
         return RecommendationDecision(False, "RETRY_BACKOFF", next_eligible_at=state.next_retry_at)
     if not force:
-        latest_feedback = await db.scalar(
+        latest_feedback_raw = await db.scalar(
             select(func.max(RecommendationFeedback.created_at)).where(RecommendationFeedback.user_id == user_id)
         )
-        if latest_feedback and state.dirty_since and (not state.last_recommendation_at or latest_feedback > state.last_recommendation_at):
+        latest_feedback = _to_naive(latest_feedback_raw)
+        if latest_feedback and state.dirty_since and (not last_recommendation_at or latest_feedback > last_recommendation_at):
             return RecommendationDecision(True, "FEEDBACK_REPLACEMENT", trigger_type)
-    if state.cooldown_until and state.cooldown_until > now and not force:
+    if cooldown_until and cooldown_until > now and not force:
         return RecommendationDecision(False, "COOLDOWN_ACTIVE", next_eligible_at=state.cooldown_until)
     if not force:
-        since = state.last_profiled_event_at or now - timedelta(days=settings.recommendation_event_window_days)
+        since = last_profiled_event_at or (now - timedelta(days=settings.recommendation_event_window_days))
         meaningful = await db.scalar(select(func.count(ActivityEvent.id)).where(ActivityEvent.user_id == user_id, ActivityEvent.occurred_at > since, ActivityEvent.event_type.in_(("SEARCH", "COURSE_CLICK", "COURSE_VIEW", "DWELL", "FILTER_CHANGE", "RECOMMENDATION_CLICK", "RECOMMENDATION_DISMISS")))) or 0
         dwell = await db.scalar(select(func.coalesce(func.sum(ActivityEvent.duration_ms), 0)).where(ActivityEvent.user_id == user_id, ActivityEvent.occurred_at > since, ActivityEvent.event_type == "DWELL")) or 0
         searches = await db.scalar(select(func.count(ActivityEvent.id)).where(ActivityEvent.user_id == user_id, ActivityEvent.occurred_at > since, ActivityEvent.event_type == "SEARCH")) or 0
@@ -61,6 +76,8 @@ async def decide(db: AsyncSession, user_id: str, *, trigger_type: str = "BEHAVIO
             return RecommendationDecision(False, "INSUFFICIENT_ACTIVITY")
         latest = await db.scalar(select(RecommendationRun).where(RecommendationRun.user_id == user_id, RecommendationRun.status.in_(("SUCCEEDED", "FALLBACK_SUCCEEDED"))).order_by(RecommendationRun.created_at.desc()).limit(1))
         profile = await db.scalar(select(UserInterestProfile).where(UserInterestProfile.user_id == user_id))
-        if latest and profile and latest.created_at and latest.created_at >= now - timedelta(hours=settings.recommendation_ttl_hours) and latest.profile_hash == profile.profile_hash and state.dirty_since is None:
+        latest_created = _to_naive(latest.created_at) if latest else None
+        if latest and profile and latest_created and latest_created >= (now - timedelta(hours=settings.recommendation_ttl_hours)) and latest.profile_hash == profile.profile_hash and state.dirty_since is None:
             return RecommendationDecision(False, "FRESH_RECOMMENDATION_EXISTS")
     return RecommendationDecision(True, "ELIGIBLE_BEHAVIOR_CHANGE" if trigger_type == "BEHAVIOR_THRESHOLD" else trigger_type, trigger_type)
+

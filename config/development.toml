@@ -1,0 +1,20 @@
+# SmartReco Development Configuration Overrides
+
+[app]
+debug = true
+
+[qdrant]
+mode = "local"
+path = "./data/qdrant"
+
+[session]
+https_only = false
+
+[logging]
+level = "INFO"
+
+[email]
+provider = "console"
+
+[langsmith]
+tracing = false

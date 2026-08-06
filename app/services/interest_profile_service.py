@@ -17,13 +17,24 @@ MEANINGFUL_EVENTS = {"SEARCH", "COURSE_CLICK", "COURSE_VIEW", "DWELL", "FILTER_C
 TOKEN_RE = re.compile(r"[a-z0-9][a-z0-9+#.-]*", re.I)
 
 
+def _to_naive(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _decay(occurred_at: datetime, now: datetime) -> float:
-    age = max(0.0, (now - occurred_at).total_seconds() / 86400)
+    dt_occurred = _to_naive(occurred_at) or _now()
+    dt_now = _to_naive(now) or _now()
+    age = max(0.0, (dt_now - dt_occurred).total_seconds() / 86400)
     return 0.5 ** (age / max(1, settings.recommendation_signal_half_life_days))
+
 
 
 def _tokens(value: str) -> set[str]:
@@ -144,7 +155,7 @@ async def _snapshot(db: AsyncSession, user_id: str) -> ProfileSnapshot:
     enrollment_rows = list((await db.execute(select(Enrollment, Course).join(Course, Course.id == Enrollment.course_id).where(Enrollment.user_id == user_id))).all())
     completed_ids = [enrollment.course_id for enrollment, _ in enrollment_rows if enrollment.completed_at or enrollment.status.upper() == "COMPLETED"]
     enrolled_ids = [enrollment.course_id for enrollment, _ in enrollment_rows if enrollment.course_id not in completed_ids]
-    continued_ids = [enrollment.course_id for enrollment, _ in enrollment_rows if enrollment.course_id in enrolled_ids and enrollment.last_accessed_at and enrollment.last_accessed_at > enrollment.started_at]
+    continued_ids = [enrollment.course_id for enrollment, _ in enrollment_rows if enrollment.course_id in enrolled_ids and enrollment.last_accessed_at and enrollment.started_at and (_to_naive(enrollment.last_accessed_at) > _to_naive(enrollment.started_at))]
     entitlement_ids = list((await db.scalars(select(CourseEntitlement.course_id).where(CourseEntitlement.user_id == user_id, CourseEntitlement.revoked_at.is_(None)))).all())
     feedback = await feedback_preferences_for_user(db, user_id=user_id)
     purchased_unstarted_ids = [course_id for course_id in entitlement_ids if course_id not in {enrollment.course_id for enrollment, _ in enrollment_rows}]

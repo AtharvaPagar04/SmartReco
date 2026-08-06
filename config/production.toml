@@ -1,0 +1,19 @@
+# SmartReco Production Configuration Overrides
+
+[app]
+debug = false
+
+[qdrant]
+mode = "remote"
+
+[session]
+https_only = true
+
+[logging]
+level = "INFO"
+
+[email]
+provider = "smtp"
+
+[langsmith]
+tracing = true

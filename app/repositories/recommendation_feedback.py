@@ -124,6 +124,14 @@ async def feedback_for_user(db: AsyncSession, *, user_id: str, window_days: int 
     )).all())
 
 
+def _to_naive(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
 async def feedback_preferences_for_user(db: AsyncSession, *, user_id: str) -> FeedbackPreferenceSummary:
     rows = await feedback_for_user(db, user_id=user_id)
     now = _now()
@@ -137,7 +145,9 @@ async def feedback_preferences_for_user(db: AsyncSession, *, user_id: str) -> Fe
     price = 0.0
     last_reason = None
     for feedback in rows:
-        age_days = max(0.0, (now - feedback.created_at).total_seconds() / 86400)
+        created_at = _to_naive(feedback.created_at) or now
+        age_days = max(0.0, (now - created_at).total_seconds() / 86400)
+
         lifetime = FEEDBACK_LIFETIME_DAYS.get(feedback.reason_code, 30)
         if age_days > lifetime:
             continue

@@ -1,0 +1,23 @@
+# SmartReco Test Environment Configuration Overrides
+
+[app]
+debug = false
+
+[qdrant]
+mode = "local"
+path = "./data/qdrant"
+
+[session]
+https_only = false
+
+[email]
+provider = "console"
+
+[langsmith]
+tracing = false
+
+[recommendations]
+enabled = true
+
+[google_auth]
+enabled = false
