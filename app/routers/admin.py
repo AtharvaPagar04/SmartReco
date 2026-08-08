@@ -245,7 +245,7 @@ async def recommendation_diagnostics(request: Request, admin: User = Depends(get
 @router.get("/learning-paths")
 async def learning_path_diagnostics(request: Request, admin: User = Depends(get_admin), db: AsyncSession = Depends(get_db)):
     from sqlalchemy.orm import selectinload
-    rows = list((await db.execute(select(LearningPath, User.email).options(selectinload(LearningPath.items)).join(User, User.id == LearningPath.user_id).order_by(LearningPath.created_at.desc()).limit(100))).all())
+    rows = list((await db.execute(select(LearningPath, User.email).options(selectinload(LearningPath.items), selectinload(LearningPath.generation_runs)).join(User, User.id == LearningPath.user_id).order_by(LearningPath.created_at.desc()).limit(100))).all())
     return page(request, "admin/learning_paths.html", current_user=admin, rows=rows)
 
 

@@ -8,6 +8,16 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
 
 
+class LearningPathStatus:
+    DRAFT = "DRAFT"
+    READY = "READY"
+    INSUFFICIENT_COVERAGE = "INSUFFICIENT_COVERAGE"
+    FAILED = "FAILED"
+    ARCHIVED = "ARCHIVED"
+
+    ALL_STATUSES = (DRAFT, READY, INSUFFICIENT_COVERAGE, FAILED, ARCHIVED)
+
+
 class LearningPath(TimestampMixin, Base):
     __tablename__ = "learning_paths"
     __table_args__ = (
@@ -19,7 +29,8 @@ class LearningPath(TimestampMixin, Base):
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(String(20), default="DRAFT", server_default="DRAFT", nullable=False)
+    status: Mapped[str] = mapped_column(String(64), default=LearningPathStatus.DRAFT, server_default="DRAFT", nullable=False)
+
     primary_domain: Mapped[str] = mapped_column(String(40), nullable=False)
     secondary_domains_json: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
     goal_code: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -85,6 +96,7 @@ class LearningPathGenerationRun(TimestampMixin, Base):
     selected_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     used_fallback: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     error_code: Mapped[str | None] = mapped_column(String(80))
+    metadata_json: Mapped[dict | None] = mapped_column(JSON)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     debug: bool = True
     secret_key: str = "development-only-change-me"
     database_url: str = "sqlite+aiosqlite:///./smartreco.db"
+    run_migrations_on_start: bool = False
     mesh_api_key: str = ""
     mesh_base_url: str = "https://api.meshapi.ai/v1"
     mesh_embedding_model: str = "openai/text-embedding-3-small"
@@ -75,6 +76,7 @@ class Settings(BaseSettings):
     learning_path_prompt_version: str = "1"
     learning_path_max_candidates: int = 16
     learning_path_max_courses: int = 8
+    learning_path_max_repairs: int = 1
     langsmith_tracing: bool = False
     langsmith_api_key: str = ""
     langsmith_project: str = "smartreco"

@@ -75,6 +75,7 @@ TOML_TO_SETTINGS: dict[tuple[str, str], str] = {
     ("learning_path", "prompt_version"): "learning_path_prompt_version",
     ("learning_path", "max_candidates"): "learning_path_max_candidates",
     ("learning_path", "max_courses"): "learning_path_max_courses",
+    ("learning_path", "max_repairs"): "learning_path_max_repairs",
 
     ("langsmith", "tracing"): "langsmith_tracing",
     ("langsmith", "project"): "langsmith_project",

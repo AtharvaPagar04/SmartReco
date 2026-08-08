@@ -28,6 +28,13 @@ class RecommendationCandidate:
     deterministic_score: float = 0.0
     retrieval_sources: list[str] = field(default_factory=list)
     evidence: dict = field(default_factory=dict)
+    path_role: str | None = None
+    primary_affinity: float = 0.0
+    secondary_affinity: float = 0.0
+    goal_affinity: float = 0.0
+    level_fit: float = 0.0
+    preference_fit: float = 0.0
+    path_score: float = 0.0
 
 
 def build_retrieval_query(profile: dict) -> str:
@@ -90,3 +97,99 @@ async def retrieve_candidates(db: AsyncSession, profile: dict, *, limit: int | N
 
 async def retrieve_sql_fallback(db: AsyncSession, profile: dict, *, limit: int | None = None) -> list[RecommendationCandidate]:
     return await _sql_candidates(db, profile, limit or settings.recommendation_max_candidates)
+
+
+def _path_exclusions(profile: dict) -> set[str]:
+    excluded = set(profile.get("excluded_course_ids", []))
+    excluded.update(profile.get("recommendation_feedback", {}).get("excluded_course_ids", []))
+    for key in ("enrolled_course_ids", "completed_course_ids", "purchased_unstarted_course_ids", "dismissed_course_ids"):
+        excluded.update(profile.get(key, []))
+    return excluded
+
+
+async def retrieve_sql_learning_path_candidates(db: AsyncSession, profile: dict, *, limit: int) -> list[RecommendationCandidate]:
+    excluded = _path_exclusions(profile)
+    filters = [Course.is_active.is_(True)]
+    if excluded:
+        filters.append(Course.id.not_in(excluded))
+    rows = list((await db.scalars(select(Course).where(*filters).order_by(Course.is_featured.desc(), Course.updated_at.desc(), Course.id.asc()).limit(limit))).all())
+    return [RecommendationCandidate(course=course, retrieval_sources=["sql_fallback"], evidence={"fallback": True}) for course in rows]
+
+
+async def retrieve_learning_path_candidates(db: AsyncSession, intent, profile: dict, *, limit: int, store: VectorStore | None = None) -> tuple[list[RecommendationCandidate], bool, bool, list[str]]:
+    """Retrieve multi-intent grounded candidates without changing recommendation retrieval."""
+    from app.services.learning_path_intent import LearningPathIntent
+
+    if not isinstance(intent, LearningPathIntent):
+        raise TypeError("intent must be LearningPathIntent")
+    excluded = _path_exclusions(profile)
+    queries = intent.retrieval_queries(profile)
+    candidates_by_id: dict[str, RecommendationCandidate] = {}
+    semantic_used = False
+    sql_used = False
+    owned_store = store is None
+    if settings.mesh_api_key:
+        store = store or VectorStore()
+        try:
+            for source, query in queries:
+                try:
+                    vector = await embed_text(query)
+                    hits = await store.search_courses(
+                        vector,
+                        limit=min(12, max(6, limit // 2)),
+                        filters={"is_active": True, "embedding_model": settings.mesh_embedding_model, "embedding_dimension": settings.vector_size, "embedding_schema_version": settings.embedding_schema_version},
+                    )
+                except Exception:
+                    continue
+                semantic_used = True
+                ids = [hit.course_id for hit in hits if hit.course_id not in excluded]
+                courses = {course.id: course for course in (await db.scalars(select(Course).where(Course.id.in_(ids), Course.is_active.is_(True)))).all()}
+                for hit in hits:
+                    course = courses.get(hit.course_id)
+                    if not course:
+                        continue
+                    candidate = candidates_by_id.get(course.id)
+                    if candidate is None:
+                        candidate = RecommendationCandidate(course=course, semantic_score=float(hit.score), retrieval_sources=[], evidence={})
+                        candidates_by_id[course.id] = candidate
+                    elif candidate.semantic_score is None or float(hit.score) > candidate.semantic_score:
+                        candidate.semantic_score = float(hit.score)
+                    if source not in candidate.retrieval_sources:
+                        candidate.retrieval_sources.append(f"qdrant:{source}")
+                    candidate.evidence.setdefault("retrieval_queries", {})[source] = query
+        finally:
+            if owned_store and store is not None:
+                store.close()
+    if len(candidates_by_id) < limit or True:
+        # Load all eligible active courses from SQL to evaluate catalog domain safety
+        from app.services.learning_path_policy import ROLE_OUT_OF_DOMAIN, classify_course_for_path
+
+        filters = [Course.is_active.is_(True)]
+        if excluded:
+            filters.append(Course.id.not_in(excluded))
+        all_courses = list((await db.scalars(select(Course).where(*filters).order_by(Course.is_featured.desc(), Course.updated_at.desc(), Course.id.asc()))).all())
+
+        for course in all_courses:
+            role, _ = classify_course_for_path(course, intent.primary_domain_code, intent.secondary_domain_codes)
+            if role != ROLE_OUT_OF_DOMAIN:
+                if course.id not in candidates_by_id:
+                    candidates_by_id[course.id] = RecommendationCandidate(
+                        course=course,
+                        retrieval_sources=["sql_catalog"],
+                        evidence={"catalog_safe": True},
+                    )
+                    sql_used = True
+
+        if len(candidates_by_id) < limit:
+            sql_used = True
+            for course in all_courses:
+                if course.id not in candidates_by_id:
+                    candidates_by_id[course.id] = RecommendationCandidate(
+                        course=course,
+                        retrieval_sources=["sql_fallback"],
+                        evidence={"fallback": True},
+                    )
+                    if len(candidates_by_id) >= limit:
+                        break
+
+    return list(candidates_by_id.values()), semantic_used, sql_used, [query for _, query in queries]

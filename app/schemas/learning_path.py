@@ -110,8 +110,10 @@ class LearningPathInput(BaseModel):
         legacy_path = values.get("path_length")
         if legacy_path in {"QUICK", "STANDARD"}:
             values["path_length"] = "FOCUSED" if legacy_path == "QUICK" else "BALANCED"
-        if "requested_course_count" not in values:
-            values["requested_course_count"] = 4 if values.get("path_length") == "FOCUSED" else 7 if values.get("path_length") == "BALANCED" else 8 if values.get("path_length") in {"EXTENDED", "DEEP"} else 4
+        if values.get("path_length") in {"FOCUSED", "BALANCED", "EXTENDED", "DEEP"}:
+            values["requested_course_count"] = {"FOCUSED": 4, "BALANCED": 7, "EXTENDED": 8, "DEEP": 8}[values["path_length"]]
+        elif "requested_course_count" not in values:
+            values["requested_course_count"] = 4
         if "selected_domains" in values:
             selected = [item for item in values.pop("selected_domains") if item]
             if not values.get("primary_domain"):

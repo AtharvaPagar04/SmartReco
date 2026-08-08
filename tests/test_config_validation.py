@@ -112,3 +112,13 @@ def test_check_config_does_not_print_secrets(capsys, monkeypatch):
     assert "super-secret-google-secret" not in stdout_stderr
     assert "API key configured: yes" in stdout_stderr
     assert "Client secret configured: yes" in stdout_stderr
+
+
+def test_run_migrations_on_start_setting_defaults_false_and_accepts_env(monkeypatch):
+    s_default = Settings()
+    assert hasattr(s_default, "run_migrations_on_start")
+    assert s_default.run_migrations_on_start is False
+
+    monkeypatch.setenv("RUN_MIGRATIONS_ON_START", "true")
+    s_custom = Settings()
+    assert s_custom.run_migrations_on_start is True

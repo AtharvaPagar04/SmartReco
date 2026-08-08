@@ -72,6 +72,7 @@ chat_model = ""
 prompt_version = "1"
 max_candidates = 16
 max_courses = 8
+max_repairs = 1
 
 [langsmith]
 tracing = false

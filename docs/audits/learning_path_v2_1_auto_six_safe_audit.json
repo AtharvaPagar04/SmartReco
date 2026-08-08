@@ -1,0 +1,62 @@
+{
+  "audit_date": "2026-08-08",
+  "audit_mode": "read-only",
+  "target_path_id": "15dac60d-1f6b-4ad0-9cdc-e7e9cc75ac19",
+  "input": {
+    "primary_domain": "FRONTEND",
+    "secondary_domains": ["UX"],
+    "goals": ["PRODUCTION", "ADVANCED"],
+    "level": "FAMILIAR",
+    "learning_preferences": ["PROJECTS", "PRODUCTION"],
+    "prior_skills": ["PYTHON", "SQL", "GIT", "APIS", "PROMPT_ENGINEERING"],
+    "format_preferences": ["PRACTICE", "PROJECTS"],
+    "weekly_hours": 5,
+    "path_length": "AUTO",
+    "requested_course_count": 8,
+    "optional_instruction": ""
+  },
+  "coverage_analysis": {
+    "minimum_viable_count": 3,
+    "available_safe_count": 6,
+    "primary_available": 2,
+    "secondary_available": 2,
+    "cross_domain_available": 2,
+    "supporting_available": 0,
+    "out_of_domain_available": 54,
+    "count_sufficient_for_auto": true
+  },
+  "composition_policy_eval": {
+    "evaluated_requested_count": 8,
+    "policy_mapped": "EXTENDED",
+    "min_primary": 4,
+    "min_secondary": 2,
+    "max_supporting": 2,
+    "cross_domain_counts_towards_primary": true,
+    "cross_domain_counts_towards_secondary": true
+  },
+  "root_causes": [
+    {
+      "rank": 1,
+      "cause": "Catch-All Status Mapping in create_learning_path()",
+      "file": "app/services/learning_path_service.py",
+      "function": "create_learning_path"
+    },
+    {
+      "rank": 2,
+      "cause": "Fixed requested_course_count Coupling in AUTO Mode",
+      "file": "app/services/learning_path_policy.py",
+      "function": "resolve_learning_path_coverage"
+    },
+    {
+      "rank": 3,
+      "cause": "Composition Policy Evaluates Requested Count Instead of Effective Target",
+      "file": "app/services/learning_path_validator.py",
+      "function": "_policy_for"
+    },
+    {
+      "rank": 4,
+      "cause": "UI Copy Conflation",
+      "file": "app/templates/learning_paths/detail.html"
+    }
+  ]
+}

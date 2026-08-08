@@ -20,7 +20,15 @@ async def test_record_path_event_helper_signature_uses_primitives_not_orm_object
 
 
 @pytest.mark.asyncio
-async def test_post_path_generation_flow(client, db_session, regular_user, course):
+async def test_post_path_generation_flow(client, db_session, regular_user, course, monkeypatch):
+    from app.models import Course
+    c2 = Course(id="c2", title="Python Data Structures", slug="python-ds", short_description="Data structures", description="Data structures in python", category="Python", tags=["python"], price=0, currency="USD", difficulty="BEGINNER", instructor="Inst", duration_minutes=60, is_active=True)
+    c3 = Course(id="c3", title="Python Web Development", slug="python-web", short_description="Web dev", description="Web dev in python", category="Python", tags=["python"], price=0, currency="USD", difficulty="BEGINNER", instructor="Inst", duration_minutes=60, is_active=True)
+    db_session.add_all([c2, c3])
+    await db_session.flush()
+
+    monkeypatch.setattr("app.config.settings.mesh_api_key", "")
+
     # Log in user
     resp = await client.get("/login")
     login_csrf = csrf(resp.text)

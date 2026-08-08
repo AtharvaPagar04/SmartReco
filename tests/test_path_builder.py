@@ -40,7 +40,7 @@ def test_legacy_path_values_remain_readable():
     assert value.goals == ["PROJECTS"]
     assert value.format_preferences == ["PROJECTS"]
     assert value.path_length == "BALANCED"
-def test_deterministic_path_orders_progression_and_respects_total_budget():
+def test_deterministic_fallback_rejects_ungrounded_domain_drift_and_respects_budget():
     path_input = LearningPathInput(primary_domain="AGENTIC_AI", goal="PRODUCTION", level="BEGINNER", learning_preferences=["PROJECTS", "PRODUCTION"], weekly_hours=5, budget_type="CUSTOM", budget_amount=Decimal("20"), path_length="FOCUSED")
     candidates = [
         RecommendationCandidate(course("Multi-Agent Orchestration", "Agentic AI", "ADVANCED", ["orchestration"], 30)),
@@ -49,7 +49,7 @@ def test_deterministic_path_orders_progression_and_respects_total_budget():
         RecommendationCandidate(course("Unrelated Design", "UI/UX Design", "BEGINNER", ["design"], 0)),
     ]
     selected = _select_courses(candidates, path_input, {})
-    assert [item.title for item in selected] == ["Introduction to Agentic AI", "Prompt Engineering Fundamentals"]
+    assert [item.title for item in selected] == ["Introduction to Agentic AI"]
     assert sum(item.price for item in selected) <= Decimal("20")
 
 

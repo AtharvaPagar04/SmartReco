@@ -1,0 +1,188 @@
+{
+  "audit_date": "2026-08-08",
+  "audit_mode": "read-only",
+  "repository": "/home/arch/DEV/SmartReco",
+  "input": {
+    "primary_domain": "FRONTEND",
+    "secondary_domains": ["UX"],
+    "goals": ["PRODUCTION", "ADVANCED"],
+    "level": "FAMILIAR",
+    "learning_preferences": ["PRODUCTION"],
+    "prior_skills": ["PYTHON", "GIT", "APIS", "PROMPT_ENGINEERING"],
+    "format_preferences": ["PRACTICE", "PROJECTS"],
+    "weekly_hours": 5,
+    "path_length": "EXTENDED",
+    "requested_course_count": 8,
+    "optional_instruction": ""
+  },
+  "input_mapping": {
+    "Frontend Development": "FRONTEND",
+    "UI/UX Design": "UX",
+    "Build a production application": "PRODUCTION",
+    "Understand advanced concepts": "ADVANCED",
+    "Some familiarity": "FAMILIAR",
+    "Production-focused examples": "PRODUCTION",
+    "Python": "PYTHON",
+    "Git": "GIT",
+    "APIs": "APIS",
+    "Prompt Engineering": "PROMPT_ENGINEERING",
+    "Practice exercises": "PRACTICE",
+    "Projects": "PROJECTS",
+    "Deep path - 8 courses": "EXTENDED"
+  },
+  "pipeline": {
+    "profile_categories": ["Web Development", "UI/UX Design"],
+    "profile_tags": ["frontend", "ui", "design", "ux"],
+    "profile_terms_first_four": [
+      "Build a production application",
+      "Practice exercises",
+      "Projects",
+      "Production-focused examples"
+    ],
+    "retrieval_query": "Interested in Web Development, UI/UX Design, frontend, ui, design, ux, and searches for Build a production application, Practice exercises, Projects, Production-focused examples.",
+    "candidate_limit": 16,
+    "path_bounds": [8, 8],
+    "second_goal_used_by_current_profile_and_score": false
+  },
+  "stored_path": {
+    "exact_screenshot_match": false,
+    "nearest_persisted_path_id": "65e07409-0b17-4c5e-af26-af3af6444f69",
+    "nearest_persisted_path_status": "READY",
+    "nearest_persisted_path_created": "2026-08-05 22:04:11",
+    "nearest_persisted_path_totals": {
+      "courses": 8,
+      "hours": 23,
+      "weeks": 5,
+      "price_usd": 446.0
+    },
+    "nearest_persisted_path_used_mesh": false,
+    "nearest_persisted_path_used_fallback": true,
+    "nearest_persisted_path_items": [
+      "Web Performance Optimization Masterclass",
+      "Building Real-Time Web Apps with WebSockets",
+      "Next.js Fullstack Architecture",
+      "Design Systems for Enterprise Apps",
+      "AI Product Roadmap Strategy",
+      "Product Discovery Fieldwork",
+      "Polars for High-Performance Data Processing",
+      "Small Language Models in Edge Production"
+    ]
+  },
+  "reported_path": [
+    "FastAPI Backend Development",
+    "Building Real-Time Web Apps with WebSockets",
+    "Web Performance Optimization Masterclass",
+    "Next.js Fullstack Architecture",
+    "Accessible Interface Craft",
+    "Design Systems That Scale",
+    "Design Systems for Enterprise Apps",
+    "Introduction to Agentic AI"
+  ],
+  "reported_candidate_set_deterministic_test": {
+    "semantic_scores_available": false,
+    "ranking_reproduced": true,
+    "ranking": [
+      {"rank": 1, "stage": 1, "title": "FastAPI Backend Development", "score": 54.8421052632},
+      {"rank": 2, "stage": 2, "title": "Building Real-Time Web Apps with WebSockets", "score": 45.4736842105},
+      {"rank": 3, "stage": 3, "title": "Web Performance Optimization Masterclass", "score": 45.1052631579},
+      {"rank": 4, "stage": 4, "title": "Next.js Fullstack Architecture", "score": 43.1052631579},
+      {"rank": 5, "stage": 5, "title": "Accessible Interface Craft", "score": 34.2105263158},
+      {"rank": 6, "stage": 6, "title": "Design Systems That Scale", "score": 29.2105263158},
+      {"rank": 7, "stage": 7, "title": "Design Systems for Enterprise Apps", "score": 24.4736842105},
+      {"rank": 8, "stage": 8, "title": "Introduction to Agentic AI", "score": 23.7368421053}
+    ]
+  },
+  "score_breakdown": {
+    "explicit_token_count": 19,
+    "FastAPI Backend Development": {
+      "matched_tokens": ["apis", "build", "development", "python", "web"],
+      "token": 11.8421,
+      "primary_category": 25,
+      "secondary_category": 0,
+      "primary_tags": 0,
+      "secondary_tags": 0,
+      "level": 7,
+      "project": 0,
+      "production": 7,
+      "profile": 4,
+      "total": 54.8421
+    },
+    "Introduction to Agentic AI": {
+      "matched_tokens": ["build", "prompt"],
+      "token": 4.7368,
+      "primary_category": 0,
+      "secondary_category": 0,
+      "primary_tags": 0,
+      "secondary_tags": 0,
+      "level": 12,
+      "project": 0,
+      "production": 7,
+      "profile": 0,
+      "total": 23.7368
+    }
+  },
+  "ablations": {
+    "prior_skills": [
+      {"scenario": "exact", "fastapi_rank": 1, "agentic_rank": 9, "fastapi_score": 54.8421, "agentic_score": 23.7368},
+      {"scenario": "no_prior_skills", "fastapi_rank": 1, "agentic_rank": 10, "fastapi_score": 52.6429, "agentic_score": 22.2143},
+      {"scenario": "no_python", "fastapi_rank": 1, "agentic_rank": 9, "fastapi_score": 53.0, "agentic_score": 24.0},
+      {"scenario": "no_apis", "fastapi_rank": 1, "agentic_rank": 9, "fastapi_score": 53.0, "agentic_score": 24.0},
+      {"scenario": "no_prompt_engineering", "fastapi_rank": 1, "agentic_rank": 10, "fastapi_score": 56.2353, "agentic_score": 21.6471}
+    ],
+    "goals": [
+      {"scenario": "production_only", "fastapi_rank": 1, "agentic_rank": 9},
+      {"scenario": "advanced_only", "fastapi_rank": 1, "agentic_rank": 10}
+    ],
+    "path_size_sql_fallback_diagnostic": [
+      {"scenario": "focused", "selected_count": 4, "primary": 4, "secondary": 0, "supporting": 0, "out_of_domain": 0},
+      {"scenario": "balanced", "selected_count": 7, "primary": 5, "secondary": 2, "supporting": 0, "out_of_domain": 0},
+      {"scenario": "deep", "selected_count": 8, "primary": 5, "secondary": 2, "supporting": 1, "out_of_domain": 0}
+    ],
+    "semantic_ablation_status": "UNVERIFIED: exact embedding call timed out before Qdrant search"
+  },
+  "taxonomy": {
+    "FRONTEND": {"categories": ["Web Development"], "tags": ["frontend", "ui"]},
+    "BACKEND": {"categories": ["Web Development"], "tags": ["backend", "apis", "python"]},
+    "FULLSTACK": {"categories": ["Web Development"], "tags": ["full-stack", "apis"]},
+    "API": {"categories": ["Web Development"], "tags": ["apis", "async"]},
+    "MOBILE": {"categories": ["Web Development"], "tags": ["mobile"]},
+    "UX": {"categories": ["UI/UX Design"], "tags": ["design", "ux"]}
+  },
+  "catalog": {
+    "active_courses": 60,
+    "web_development_courses": 6,
+    "ui_ux_design_courses": 4,
+    "enough_category_aligned_courses_for_eight": true
+  },
+  "llm_and_validation": {
+    "chat_llm_course_selection": false,
+    "chat_llm_sequencing": false,
+    "embedding_retrieval_configured": true,
+    "used_mesh_means": "semantic retrieval succeeded and SQL fallback was not used",
+    "domain_validator": false,
+    "difficulty_progression_hard_constraint": false,
+    "learning_path_repair_loop": false,
+    "transition_text_causes_selection": false
+  },
+  "root_causes": [
+    {"rank": 1, "cause": "Taxonomy collision plus broad primary category bonus", "confidence": "HIGH"},
+    {"rank": 2, "cause": "Deterministic reranking discards semantic order", "confidence": "HIGH"},
+    {"rank": 3, "cause": "No domain-composition validator or repair loop", "confidence": "HIGH"},
+    {"rank": 4, "cause": "Long-path tail exposure", "confidence": "MEDIUM"},
+    {"rank": 5, "cause": "Prior-skill lexical normalization", "confidence": "MEDIUM"}
+  ],
+  "limitations": [
+    "Exact screenshot path is absent from current SQLite state.",
+    "Exact Mesh embedding call timed out after 12 seconds.",
+    "Current local Qdrant storage was locked for a second read-only client.",
+    "Exact Qdrant candidate ranks and semantic scores are consequently unavailable.",
+    "Historical exact behavior profile cannot be identified without the absent path row."
+  ],
+  "validation": {
+    "focused_test_command": "./.venv311/bin/python -m pytest tests/test_path_builder.py",
+    "focused_test_result": "5 passed",
+    "application_files_modified": false,
+    "database_mutated": false,
+    "qdrant_mutated": false
+  }
+}

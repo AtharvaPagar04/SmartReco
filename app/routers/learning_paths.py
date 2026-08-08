@@ -75,7 +75,8 @@ def _context(request: Request, user: User | None, *, draft: dict | None = None, 
         "Learning preferences": ", ".join(PREFERENCES.get(item, item) for item in draft.get("learning_preferences", [])) or "Not selected",
         "Prior skills": ", ".join(PRIOR_SKILLS.get(item, item) for item in draft.get("prior_skills", [])) or "None",
         "Format preferences": ", ".join(FORMAT_PREFERENCES.get(item, item) for item in draft.get("format_preferences", [draft.get("format_preference")] if draft.get("format_preference") else [])) or "None",
-        "Path size": {"FOCUSED": "Focused path — 3–4 courses", "BALANCED": "Balanced path — 6–7 courses", "EXTENDED": "Deep path — 8 courses", "DEEP": "Deep path — 8 courses", "AUTO": "Let SmartReco decide — 3–8 courses"}.get(draft.get("path_length"), "Let SmartReco decide — 3–8 courses"),
+        "Path size": {"FOCUSED": "Focused path — 3–4 courses", "BALANCED": "Balanced path — 6–7 courses", "EXTENDED": "Deep path — target 8 courses", "DEEP": "Deep path — target 8 courses", "AUTO": "Let SmartReco decide — 3–8 courses"}.get(draft.get("path_length"), "Let SmartReco decide — 3–8 courses"),
+
     }
     return dict(current_user=user, domain_options=DOMAIN_OPTIONS, domain_groups=tuple(dict.fromkeys(item.group for item in DOMAIN_OPTIONS)), goals=GOALS, levels=LEVELS, preferences=PREFERENCES, prior_skills=PRIOR_SKILLS, formats=FORMAT_PREFERENCES, path_lengths=PATH_LENGTHS, quick_instructions=QUICK_INSTRUCTIONS, draft=draft, review_values=review_values, errors=errors or [], field_errors=field_errors or {}, active_step=active_step, selection_limits={"domains": MAX_SELECTED_DOMAINS, "goals": MAX_LEARNING_GOALS, "learning_preferences": MAX_LEARNING_PREFERENCES, "prior_skills": MAX_PRIOR_SKILLS, "format_preferences": MAX_FORMAT_PREFERENCES, "quick_instructions": MAX_QUICK_INSTRUCTIONS}, saved_paths=saved_paths or [])
 

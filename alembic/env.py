@@ -33,19 +33,22 @@ def redact_url(url: str) -> str:
     return url
 
 
-def do_run_migrations(connection):
-    context.configure(connection=connection, target_metadata=target_metadata, compare_type=True, render_as_batch=settings.database_url.startswith("sqlite"))
+async def run_async_migrations():
+    x_args = context.get_x_argument(as_dictionary=True)
+    db_url = x_args.get("db_url") or settings.database_url
+    configuration = context.config.get_section(context.config.config_ini_section) or {}
+    configuration["sqlalchemy.url"] = db_url
+    connectable = async_engine_from_config(configuration, prefix="sqlalchemy.", poolclass=pool.NullPool)
+    async with connectable.connect() as connection:
+        await connection.run_sync(lambda conn: do_run_migrations(conn, db_url=db_url))
+    await connectable.dispose()
+
+
+def do_run_migrations(connection, db_url: str):
+    context.configure(connection=connection, target_metadata=target_metadata, compare_type=True, render_as_batch=db_url.startswith("sqlite"))
     with context.begin_transaction():
         context.run_migrations()
 
-
-async def run_async_migrations():
-    configuration = context.config.get_section(context.config.config_ini_section) or {}
-    configuration["sqlalchemy.url"] = settings.database_url
-    connectable = async_engine_from_config(configuration, prefix="sqlalchemy.", poolclass=pool.NullPool)
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
-    await connectable.dispose()
 
 
 def run_migrations_offline():

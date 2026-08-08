@@ -1,0 +1,168 @@
+{
+  "audit_date": "2026-08-08",
+  "audit_mode": "read-only",
+  "repository": "/home/arch/DEV/SmartReco",
+  "input": {
+    "primary_domain": "FRONTEND",
+    "secondary_domains": ["UX"],
+    "goals": ["PRODUCTION", "ADVANCED"],
+    "level": "FAMILIAR",
+    "learning_preferences": ["PROJECTS", "PRODUCTION"],
+    "prior_skills": ["PYTHON", "GIT", "APIS", "PROMPT_ENGINEERING"],
+    "format_preferences": ["PRACTICE", "PROJECTS"],
+    "weekly_hours": 5,
+    "path_length": "EXTENDED",
+    "requested_course_count": 8,
+    "optional_instruction": ""
+  },
+  "observed_rendered_result": {
+    "item_count": 6,
+    "estimated_total_hours": 17,
+    "estimated_weeks": 4,
+    "total_price_usd": 307.0,
+    "course_sequence": [
+      "Design Systems for Enterprise Apps",
+      "Web Performance Optimization Masterclass",
+      "Advanced Motion Design for Web Interfaces",
+      "Next.js Fullstack Architecture",
+      "Accessible Interface Craft",
+      "Design Systems That Scale"
+    ]
+  },
+  "exact_run_reconstruction": {
+    "retrieved_candidates": 19,
+    "domain_safe_candidates_in_pool": 6,
+    "domain_safe_candidates_in_entire_catalog": 6,
+    "out_of_domain_candidates_in_pool": 13,
+    "out_of_domain_candidates_in_catalog": 54,
+    "selected_courses": [
+      {
+        "position": 1,
+        "id": "82d61c93-cb50-4e6a-a60c-9787d6dfed17",
+        "title": "Design Systems for Enterprise Apps",
+        "category": "UI/UX Design",
+        "role": "CROSS_DOMAIN",
+        "price": 65.0,
+        "duration_minutes": 180,
+        "difficulty": "INTERMEDIATE"
+      },
+      {
+        "position": 2,
+        "id": "598d601a-43cb-470a-ac38-d1ba5fff9481",
+        "title": "Web Performance Optimization Masterclass",
+        "category": "Web Development",
+        "role": "PRIMARY",
+        "price": 59.0,
+        "duration_minutes": 180,
+        "difficulty": "ADVANCED"
+      },
+      {
+        "position": 3,
+        "id": "3e3b5acb-015e-42b7-ae5c-cc7824469352",
+        "title": "Advanced Motion Design for Web Interfaces",
+        "category": "UI/UX Design",
+        "role": "CROSS_DOMAIN",
+        "price": 55.0,
+        "duration_minutes": 160,
+        "difficulty": "ADVANCED"
+      },
+      {
+        "position": 4,
+        "id": "717f79b6-0d4c-4c2d-a087-a5e5560eb5ca",
+        "title": "Next.js Fullstack Architecture",
+        "category": "Web Development",
+        "role": "PRIMARY",
+        "price": 79.0,
+        "duration_minutes": 240,
+        "difficulty": "INTERMEDIATE"
+      },
+      {
+        "position": 5,
+        "id": "0ccb81ee-8b7c-44f0-8914-d9df7f0d5fe7",
+        "title": "Accessible Interface Craft",
+        "category": "UI/UX Design",
+        "role": "SECONDARY",
+        "price": 0.0,
+        "duration_minutes": 120,
+        "difficulty": "BEGINNER"
+      },
+      {
+        "position": 6,
+        "id": "dbe942fe-e9e4-4128-b541-8ae6f0df809f",
+        "title": "Design Systems That Scale",
+        "category": "UI/UX Design",
+        "role": "SECONDARY",
+        "price": 49.0,
+        "duration_minutes": 140,
+        "difficulty": "INTERMEDIATE"
+      }
+    ]
+  },
+  "invariant_matrix": {
+    "form": {"requested_course_count": 8, "path_length": "EXTENDED"},
+    "parsed_input": {"requested_course_count": 8, "path_length": "EXTENDED"},
+    "pydantic": {"requested_course_count": 8, "path_length": "EXTENDED"},
+    "intent": {"requested_course_count": 8, "path_length": "EXTENDED"},
+    "retrieval": {"candidate_limit": 19, "domain_safe_found": 6},
+    "planner_prompt": {"requested_course_count": 8, "path_length": "EXTENDED"},
+    "validator_mesh": {"exact_count_enforced": true, "failed": true},
+    "repair": {"exact_count_enforced": true, "failed": true},
+    "fallback_selection": {"target_count": 8, "selected_count": 6, "mismatch": true},
+    "validator_fallback": {"exact_count_enforced": false, "status": "FALLBACK_VALID"},
+    "persistence": {"exact_count_checked": false, "persisted_count": 6, "status": "READY"},
+    "ui_render": {"rendered_count": 6}
+  },
+  "provenance_metadata": {
+    "semantic_retrieval_used": true,
+    "sql_fallback_used": false,
+    "llm_generation_used": false,
+    "llm_repair_count": 1,
+    "deterministic_fallback_used": true,
+    "generation_model": null,
+    "validation_status": "FALLBACK_VALID",
+    "candidate_count": 19,
+    "selected_count": 6,
+    "target_count": 8,
+    "repair_count": 1
+  },
+  "root_causes": [
+    {
+      "rank": 1,
+      "cause": "Catalog Candidate Shortage for FRONTEND + UX",
+      "description": "Only 6 domain-safe courses exist in the entire catalog of 60 active courses for FRONTEND primary and UX secondary domains. 0 supporting courses exist. An 8-course valid domain-safe path is mathematically impossible with the current catalog and classification thresholds.",
+      "file": "app/services/learning_path_policy.py",
+      "function": "classify_course_domain_affinity"
+    },
+    {
+      "rank": 2,
+      "cause": "Fallback Validation Bypass of Exact Count Invariant",
+      "description": "generate_plan_with_repairs explicitly sets exact_count=False when validating deterministic fallback plans, allowing a truncated 6-item plan for an 8-item request to receive validation_status = 'FALLBACK_VALID'.",
+      "file": "app/services/learning_path_planner.py",
+      "function": "generate_plan_with_repairs",
+      "line": 279
+    },
+    {
+      "rank": 3,
+      "cause": "Missing Persistence Gate Invariant Assertion",
+      "description": "create_learning_path persists whatever course list plan_result returns and unconditionally marks the LearningPath status as READY without verifying len(courses) == intent.requested_course_count.",
+      "file": "app/services/learning_path_service.py",
+      "function": "create_learning_path"
+    },
+    {
+      "rank": 4,
+      "cause": "User-Facing Internal Enum Wording Leakage in Fallback Copy",
+      "description": "fallback_plan directly interpolates role.casefold() into why_this_course, producing user-facing copy containing raw enum names such as 'cross_domain', 'primary', and 'secondary'.",
+      "file": "app/services/learning_path_planner.py",
+      "function": "fallback_plan",
+      "line": 231
+    }
+  ],
+  "disproven_hypotheses": [
+    "Migration 0011 corruption or DB schema mismatch",
+    "UI rendering bug or item filtering in template/Jinja",
+    "Database truncation of LearningPathItem rows",
+    "Mesh planner returning 6 valid courses and passing validation",
+    "Budget constraint excluding the tail 2 courses",
+    "Difficulty regression validator excluding 2 courses"
+  ]
+}
