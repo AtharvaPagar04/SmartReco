@@ -1,7 +1,7 @@
 # SmartReco Exact Learning Path Generation Audit
 
-Audit date: 2026-08-08  
-Repository: `/home/arch/DEV/SmartReco`  
+Audit date: 2026-08-08
+Repository: `/home/arch/DEV/SmartReco`
 Audit mode: read-only; no application, database, Qdrant, or configuration changes
 
 ## Executive summary
@@ -361,8 +361,8 @@ The baseline and production-only queries are identical because the current path 
 
 ## Behavioral profile ablation
 
-**FACT:** behavior profiles exist in the database and contain aggregate categories, tags, and search terms.  
-**FACT:** exact screenshot identity cannot be established because its path row is absent.  
+**FACT:** behavior profiles exist in the database and contain aggregate categories, tags, and search terms.
+**FACT:** exact screenshot identity cannot be established because its path row is absent.
 **TEST RESULT:** merging a representative stored Frontend/Extended profile changes the retrieval profile and SQL fallback candidate pool, but the production path passes a path-only profile to `_select_courses()`, so it adds no direct deterministic score component.
 
 The representative stored profile was strongly weighted toward UI/UX, Agentic AI, Python, and evaluation/agent tags. This makes behavior a plausible candidate-pool influence, but not a verified cause of the screenshot sequence. Exact behavior/Qdrant deltas are **UNVERIFIED**.
@@ -420,8 +420,8 @@ BEGINNER -> INTERMEDIATE -> INTERMEDIATE -> BEGINNER
 
 Numeric values are `BEGINNER=0`, `INTERMEDIATE=1`, `ADVANCED=2`. The sequence contains `ADVANCED -> INTERMEDIATE`, `INTERMEDIATE -> BEGINNER`, and a final `INTERMEDIATE -> BEGINNER` regression.
 
-**FACT:** difficulty is a score component and an ascending tie-breaker.  
-**FACT:** difficulty is not a hard progression constraint.  
+**FACT:** difficulty is a score component and an ascending tie-breaker.
+**FACT:** difficulty is not a hard progression constraint.
 **TEST RESULT:** the current selector allows advanced courses before beginner courses.
 
 ### Controlled path-size diagnostic
@@ -611,4 +611,3 @@ Existing focused validation:
 ```
 
 Worktree verification after the audit showed only the pre-existing edits in `app/config.py` and `tests/test_config_validation.py`; this audit added only the two files under `docs/audits/`.
-

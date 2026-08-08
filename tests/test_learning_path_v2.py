@@ -620,8 +620,3 @@ async def test_mesh_candidate_limit_never_exceeded(monkeypatch):
     result = await generate_plan_with_repairs(intent, many_candidates, {})
     assert result.prompt_candidate_count == 16
     assert len(captured_prompt_candidates) == 16
-
-
-
-
-

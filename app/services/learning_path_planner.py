@@ -427,4 +427,3 @@ async def generate_plan_with_repairs(intent: LearningPathIntent, candidates: lis
         llm_failure_reason=llm_failure_reason,
         prompt_candidate_count=prompt_candidate_count,
     )
-
