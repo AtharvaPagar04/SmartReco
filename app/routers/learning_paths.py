@@ -13,14 +13,14 @@ from app.dependencies import get_user
 from app.flash import flash
 from app.models import ActivityEvent, LearningPath, User
 from app.routers.helpers import page
-from app.schemas.learning_path import DOMAIN_BY_CODE, DOMAIN_OPTIONS, FORMAT_PREFERENCES, GOALS, LEVELS, PATH_LENGTHS, PREFERENCES, PRIOR_SKILLS, QUICK_INSTRUCTIONS, LearningPathInput
+from app.schemas.learning_path import DOMAIN_BY_CODE, DOMAIN_OPTIONS, GOALS, LEVELS, PATH_LENGTHS, LearningPathInput
 from app.security import current_user
 from app.services.cart_service import CartError, add_course_to_cart
 from app.services.course_action_service import load_course_actions
 from app.services.event_service import server_session_id
 from app.services.form_error_service import friendly_validation_errors
 from app.services.learning_path_service import create_learning_path, get_owned_path, replace_item
-from app.services.learning_path_policy import MAX_FORMAT_PREFERENCES, MAX_LEARNING_GOALS, MAX_LEARNING_PREFERENCES, MAX_PRIOR_SKILLS, MAX_QUICK_INSTRUCTIONS, MAX_SELECTED_DOMAINS
+from app.services.learning_path_policy import MAX_LEARNING_GOALS, MAX_SELECTED_DOMAINS
 
 router = APIRouter()
 def _form_list(form, name: str) -> list[str]:
@@ -38,15 +38,11 @@ def _raw_form(form) -> dict:
         primary_domain = str(form.get("primary_domain", "")).strip()
         secondary_domains = _form_list(form, "secondary_domains")
     goals = _form_list(form, "goals") or _form_list(form, "goal")
-    format_preferences = _form_list(form, "format_preferences") or _form_list(form, "format_preference")
     return {
         "primary_domain": primary_domain,
         "secondary_domains": secondary_domains,
         "goals": goals,
         "level": str(form.get("level", "")).strip(),
-        "learning_preferences": _form_list(form, "learning_preferences"),
-        "prior_skills": _form_list(form, "prior_skills"),
-        "format_preferences": format_preferences,
         "weekly_hours": form.get("weekly_hours", ""),
         "target_weeks": form.get("target_weeks") or None,
         "budget_type": form.get("budget_type", "FLEXIBLE"),
@@ -55,8 +51,6 @@ def _raw_form(form) -> dict:
         "currency": form.get("currency", "USD"),
         "path_length": form.get("path_length", "AUTO"),
         "requested_course_count": form.get("requested_course_count") or 4,
-        "optional_instruction": str(form.get("optional_instruction", ""))[:500],
-        "quick_instructions": _form_list(form, "quick_instructions"),
     }
 
 
@@ -72,18 +66,17 @@ def _context(request: Request, user: User | None, *, draft: dict | None = None, 
         "Secondary interests": ", ".join(DOMAIN_BY_CODE[item].label for item in draft.get("secondary_domains", []) if item in DOMAIN_BY_CODE) or "None",
         "Learning goals": ", ".join(GOALS.get(item, item) for item in draft.get("goals", [draft.get("goal")] if draft.get("goal") else [])) or "Not selected",
         "Current level": LEVELS.get(draft.get("level"), "Not selected"),
-        "Learning preferences": ", ".join(PREFERENCES.get(item, item) for item in draft.get("learning_preferences", [])) or "Not selected",
-        "Prior skills": ", ".join(PRIOR_SKILLS.get(item, item) for item in draft.get("prior_skills", [])) or "None",
-        "Format preferences": ", ".join(FORMAT_PREFERENCES.get(item, item) for item in draft.get("format_preferences", [draft.get("format_preference")] if draft.get("format_preference") else [])) or "None",
+        "Weekly time": f"{draft.get('weekly_hours', 0)} hours/week" if draft.get("weekly_hours") else "Not selected",
+        "Desired horizon": {None: "Flexible", "": "Flexible", 1: "1 week", 4: "1 month", 8: "2 months", 12: "3 months"}.get(draft.get("target_weeks"), "Flexible"),
         "Path size": {"FOCUSED": "Focused path — 3–4 courses", "BALANCED": "Balanced path — 6–7 courses", "EXTENDED": "Deep path — target 8 courses", "DEEP": "Deep path — target 8 courses", "AUTO": "Let SmartReco decide — 3–8 courses"}.get(draft.get("path_length"), "Let SmartReco decide — 3–8 courses"),
 
     }
-    return dict(current_user=user, domain_options=DOMAIN_OPTIONS, domain_groups=tuple(dict.fromkeys(item.group for item in DOMAIN_OPTIONS)), goals=GOALS, levels=LEVELS, preferences=PREFERENCES, prior_skills=PRIOR_SKILLS, formats=FORMAT_PREFERENCES, path_lengths=PATH_LENGTHS, quick_instructions=QUICK_INSTRUCTIONS, draft=draft, review_values=review_values, errors=errors or [], field_errors=field_errors or {}, active_step=active_step, selection_limits={"domains": MAX_SELECTED_DOMAINS, "goals": MAX_LEARNING_GOALS, "learning_preferences": MAX_LEARNING_PREFERENCES, "prior_skills": MAX_PRIOR_SKILLS, "format_preferences": MAX_FORMAT_PREFERENCES, "quick_instructions": MAX_QUICK_INSTRUCTIONS}, saved_paths=saved_paths or [])
+    return dict(current_user=user, domain_options=DOMAIN_OPTIONS, domain_groups=tuple(dict.fromkeys(item.group for item in DOMAIN_OPTIONS)), goals=GOALS, levels=LEVELS, path_lengths=PATH_LENGTHS, draft=draft, review_values=review_values, errors=errors or [], field_errors=field_errors or {}, active_step=active_step, selection_limits={"domains": MAX_SELECTED_DOMAINS, "goals": MAX_LEARNING_GOALS}, saved_paths=saved_paths or [])
 
 
 async def _invalid_page(request: Request, db: AsyncSession, user: User | None, error: ValidationError):
     field_errors = friendly_validation_errors(error)
-    step = next((2 if field in {"goals"} else 3 if field in {"level", "prior_skills"} else 4 if field in {"learning_preferences", "format_preferences"} else 5 if field in {"weekly_hours", "target_weeks", "requested_course_count"} else 6 if field in {"optional_instruction", "quick_instructions"} else 1 for field in field_errors), 1)
+    step = next((2 if field == "goals" else 3 if field == "level" else 4 if field in {"weekly_hours", "target_weeks", "requested_course_count", "budget_amount"} else 1 for field in field_errors), 1)
     saved_paths = list((await db.scalars(select(LearningPath).options(selectinload(LearningPath.items)).where(LearningPath.user_id == user.id, LearningPath.status != "ARCHIVED").order_by(LearningPath.created_at.desc()))).all()) if user else []
     return page(request, "path_builder/index.html", **_context(request, user, draft=_raw_form(await request.form()), errors=list(dict.fromkeys(field_errors.values())), field_errors=field_errors, active_step=step, saved_paths=saved_paths))
 
@@ -122,6 +115,12 @@ async def _record_path_event(
 async def path_builder(request: Request, db: AsyncSession = Depends(get_db)):
     user = await current_user(request, db)
     draft = request.session.get("path_builder_draft", {})
+    edit_path_id = request.query_params.get("edit_path_id")
+    if user and edit_path_id:
+        path = await get_owned_path(db, user.id, edit_path_id)
+        if path:
+            draft = LearningPathInput.model_validate(path.input_json).model_dump(mode="json")
+            request.session["path_builder_draft"] = draft
     saved_paths = list((await db.scalars(select(LearningPath).options(selectinload(LearningPath.items)).where(LearningPath.user_id == user.id, LearningPath.status != "ARCHIVED").order_by(LearningPath.created_at.desc()))).all()) if user else []
     return page(request, "path_builder/index.html", **_context(request, user, draft=draft, saved_paths=saved_paths))
 
@@ -134,38 +133,97 @@ async def path_builder_review(request: Request, db: AsyncSession = Depends(get_d
     return page(request, "path_builder/review.html", **_context(request, user, draft=draft, saved_paths=saved_paths))
 
 
-@router.post("/path-builder/draft")
-async def save_path_draft(request: Request, db: AsyncSession = Depends(get_db), csrf_token: str = Form("")):
-    validate_csrf_token(request, csrf_token)
-    user = await current_user(request, db)
-    try:
-        path_input = await _parse_input(request)
-    except ValidationError as exc:
-        return await _invalid_page(request, db, user, exc)
-    payload = path_input.model_dump(mode="json")
-    if not user:
-        request.session["path_builder_draft"] = payload
-        return RedirectResponse("/login?next=/path-builder", status_code=303)
-    path = await create_learning_path(db, user, path_input, status="DRAFT")
-    await db.commit()
-    return RedirectResponse(f"/learning-paths/{path.id}", status_code=303)
+
+import time
+import uuid
+import logging
+from app.services.learning_path_logging import LearningPathTraceContext, log_learning_path_step
+
+router_logger = logging.getLogger("app.routers.learning_paths")
 
 
 @router.post("/path-builder/generate")
 async def generate_path(request: Request, db: AsyncSession = Depends(get_db), csrf_token: str = Form("")):
     validate_csrf_token(request, csrf_token)
     user = await current_user(request, db)
+
+    trace_id = getattr(request.state, "trace_id", None) or getattr(request.state, "request_id", None) or str(uuid.uuid4())
+    trace_context = LearningPathTraceContext(trace_id=trace_id)
+
+    raw = _raw_form(await request.form())
+    user_id_str = user.id if user else "anonymous"
+
+    log_learning_path_step(
+        router_logger,
+        "learning_path.request.start",
+        trace_id,
+        user_id=user_id_str,
+        path_mode=raw.get("path_length"),
+        primary_domain=raw.get("primary_domain"),
+        secondary_domain_count=len(raw.get("secondary_domains", [])),
+        goal_count=len(raw.get("goals", [])),
+        level=raw.get("level"),
+        weekly_hours=raw.get("weekly_hours"),
+    )
+
+    log_learning_path_step(
+        router_logger,
+        "learning_path.step.start",
+        trace_id,
+        step="form.parse",
+    )
+    t_fp = time.perf_counter()
     try:
-        path_input = await _parse_input(request)
+        path_input = LearningPathInput.model_validate(raw)
+        fp_dur = (time.perf_counter() - t_fp) * 1000
+        log_learning_path_step(
+            router_logger,
+            "learning_path.step.success",
+            trace_id,
+            step="form.parse",
+            duration_ms=fp_dur,
+            selected_domain_count=len(raw.get("secondary_domains", [])) + 1,
+            goal_count=len(raw.get("goals", [])),
+            path_mode=raw.get("path_length"),
+        )
     except ValidationError as exc:
+        fp_dur = (time.perf_counter() - t_fp) * 1000
+        field_errs = friendly_validation_errors(exc)
+        val_fields = list(field_errs.keys())
+
+        log_learning_path_step(
+            router_logger,
+            "learning_path.step.error",
+            trace_id,
+            step="form.parse",
+            duration_ms=fp_dur,
+            exception_type="ValidationError",
+            validation_field_names=val_fields,
+        )
+        trace_context.record_failure("form.parse", "VALIDATION_ERROR")
+        log_learning_path_step(
+            router_logger,
+            "learning_path.request.failed",
+            trace_id,
+            path_id=None,
+            final_status="FAILED",
+            first_failure_stage=trace_context.first_failure_stage,
+            first_failure_reason=trace_context.first_failure_reason,
+            final_failure_stage=trace_context.final_failure_stage,
+            final_failure_reason=trace_context.final_failure_reason,
+            total_duration_ms=trace_context.elapsed_ms(),
+        )
         return await _invalid_page(request, db, user, exc)
+
     if not user:
         request.session["path_builder_draft"] = path_input.model_dump(mode="json")
         return RedirectResponse("/login?next=/path-builder", status_code=303)
-    path = await create_learning_path(db, user, path_input)
+
+    path = await create_learning_path(db, user, path_input, trace_context=trace_context)
     request.session.pop("path_builder_draft", None)
     loaded = await get_owned_path(db, user.id, path.id)
     course_count = len(loaded.items) if loaded else 0
+
     await _record_path_event(
         db,
         request,
@@ -186,7 +244,76 @@ async def generate_path(request: Request, db: AsyncSession = Depends(get_db), cs
         goal_code=path.goal_code,
         course_count=course_count,
     )
-    await db.commit()
+
+    t_com = time.perf_counter()
+    log_learning_path_step(
+        router_logger,
+        "learning_path.step.start",
+        trace_id,
+        step="persistence.commit",
+    )
+    try:
+        await db.commit()
+        com_dur = (time.perf_counter() - t_com) * 1000
+        log_learning_path_step(
+            router_logger,
+            "learning_path.step.success",
+            trace_id,
+            step="persistence.commit",
+            duration_ms=com_dur,
+        )
+    except Exception as exc:
+        com_dur = (time.perf_counter() - t_com) * 1000
+        await db.rollback()
+        log_learning_path_step(
+            router_logger,
+            "learning_path.step.error",
+            trace_id,
+            step="persistence.rollback",
+            duration_ms=com_dur,
+            exception_class=exc.__class__.__name__,
+        )
+        trace_context.record_failure("persistence.commit", "COMMIT_FAILED")
+        log_learning_path_step(
+            router_logger,
+            "learning_path.request.failed",
+            trace_id,
+            path_id=path.id,
+            final_status="FAILED",
+            first_failure_stage=trace_context.first_failure_stage,
+            first_failure_reason=trace_context.first_failure_reason,
+            final_failure_stage=trace_context.final_failure_stage,
+            final_failure_reason=trace_context.final_failure_reason,
+            total_duration_ms=trace_context.elapsed_ms(),
+        )
+        raise exc
+
+    if path.status in ("FAILED", "INSUFFICIENT_COVERAGE"):
+        log_learning_path_step(
+            router_logger,
+            "learning_path.request.failed",
+            trace_id,
+            path_id=path.id,
+            final_status=str(path.status.value if hasattr(path.status, 'value') else path.status),
+            first_failure_stage=trace_context.first_failure_stage,
+            first_failure_reason=trace_context.first_failure_reason,
+            final_failure_stage=trace_context.final_failure_stage,
+            final_failure_reason=trace_context.final_failure_reason,
+            total_duration_ms=trace_context.elapsed_ms(),
+        )
+    else:
+        source_str = "MESH" if path.used_mesh else "FALLBACK"
+        log_learning_path_step(
+            router_logger,
+            "learning_path.request.success",
+            trace_id,
+            path_id=path.id,
+            status=str(path.status.value if hasattr(path.status, 'value') else path.status),
+            selected_count=course_count,
+            source=source_str,
+            total_duration_ms=trace_context.elapsed_ms(),
+        )
+
     return RedirectResponse(f"/learning-paths/{path.id}", status_code=303)
 
 

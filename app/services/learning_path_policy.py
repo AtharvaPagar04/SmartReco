@@ -1,20 +1,15 @@
 MAX_SELECTED_DOMAINS = 3
 MAX_SECONDARY_DOMAINS = 2
 MAX_LEARNING_GOALS = 2
-MAX_LEARNING_PREFERENCES = 3
-MAX_PRIOR_SKILLS = 6
-MAX_FORMAT_PREFERENCES = 3
-MAX_QUICK_INSTRUCTIONS = 3
 
 MIN_PATH_COURSES = 3
 MAX_PATH_COURSES = 8
 
 DOMAIN_SCORE_WEIGHTS = {
     "semantic": 0.35,
-    "domain": 0.30,
+    "domain": 0.35,
     "goals": 0.15,
     "level": 0.10,
-    "preferences": 0.05,
     "behavior": 0.05,
 }
 
@@ -25,36 +20,10 @@ ROLE_SUPPORTING = "SUPPORTING"
 ROLE_OUT_OF_DOMAIN = "OUT_OF_DOMAIN"
 
 
-def path_course_target(path_length: str, requested_course_count: int) -> int:
-    if path_length == "FOCUSED":
-        return 4
-    if path_length == "BALANCED":
-        return 7
-    if path_length in {"EXTENDED", "DEEP"}:
-        return 8
-    return requested_course_count if requested_course_count in {3, 4, 6, 7, 8} else 4
-
-
-def composition_policy(path_length: str, has_secondary: bool) -> dict[str, int]:
-    if path_length == "FOCUSED":
-        return {"min_primary": 2, "min_secondary": int(has_secondary), "max_supporting": 1, "max_out_of_domain": 0}
-    if path_length == "BALANCED":
-        return {"min_primary": 3, "min_secondary": 1 if has_secondary else 0, "max_supporting": 1, "max_out_of_domain": 0}
-    return {"min_primary": 4, "min_secondary": 2 if has_secondary else 0, "max_supporting": 2, "max_out_of_domain": 0}
-
-
 from dataclasses import dataclass
 import re
 
 from app.models import Course
-
-
-def path_mode_for_effective_count(effective_target_count: int) -> str:
-    if effective_target_count <= 4:
-        return "FOCUSED"
-    if effective_target_count <= 7:
-        return "BALANCED"
-    return "EXTENDED"
 
 
 @dataclass(frozen=True)
@@ -68,6 +37,9 @@ class LearningPathCoverage:
     secondary_available: int
     cross_domain_available: int
     supporting_available: int
+    covered_domains: tuple[str, ...] = ()
+    uncovered_domains: tuple[str, ...] = ()
+    domain_coverage_limited: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -80,6 +52,10 @@ class LearningPathCoverage:
             "secondary_available": self.secondary_available,
             "cross_domain_available": self.cross_domain_available,
             "supporting_available": self.supporting_available,
+            "eligible_course_count": self.available_safe_count,
+            "covered_domains": list(self.covered_domains),
+            "uncovered_domains": list(self.uncovered_domains),
+            "domain_coverage_limited": self.domain_coverage_limited,
         }
 
 
@@ -109,10 +85,14 @@ def resolve_learning_path_coverage(
     cross_count = 0
     supporting_count = 0
     safe_course_ids = set()
+    domain_affinities: dict[str, list[float]] = {}
+    selected_domains = (intent.primary_domain_code, *intent.secondary_domain_codes)
 
     for candidate in candidates:
-        role, _ = classify_course_for_path(candidate.course, intent.primary_domain_code, intent.secondary_domain_codes)
+        role, affinities = classify_course_for_path(candidate.course, intent.primary_domain_code, intent.secondary_domain_codes)
         candidate.path_role = role
+        for domain_code, affinity in affinities.items():
+            domain_affinities.setdefault(domain_code, []).append(affinity.score)
         if role == ROLE_OUT_OF_DOMAIN:
             continue
         safe_course_ids.add(candidate.course.id)
@@ -126,32 +106,29 @@ def resolve_learning_path_coverage(
             supporting_count += 1
 
     available_safe_count = len(safe_course_ids)
-    requested = intent.requested_course_count
-
-    if intent.path_length == "AUTO":
-        if available_safe_count < MIN_PATH_COURSES:
-            effective = available_safe_count
-            is_limited = True
-            reason = "CATALOG_DOMAIN_COVERAGE"
-        else:
-            effective = min(MAX_PATH_COURSES, available_safe_count)
-            is_limited = False
-            reason = None
-    else:
-        effective = min(requested, available_safe_count)
-        is_limited = effective < requested
-        reason = "CATALOG_DOMAIN_COVERAGE" if is_limited else None
+    requested = MAX_PATH_COURSES if intent.path_length == "AUTO" else intent.requested_course_count
+    chosen_target = min(requested, available_safe_count)
+    is_limited = available_safe_count < requested
+    reason = "CATALOG_DOMAIN_COVERAGE" if is_limited else None
+    covered_domains = tuple(
+        domain for domain in selected_domains
+        if max(domain_affinities.get(domain, ()), default=0.0) >= 0.50
+    )
+    uncovered_domains = tuple(domain for domain in selected_domains if domain not in covered_domains)
 
     return LearningPathCoverage(
         requested_count=requested,
         available_safe_count=available_safe_count,
-        effective_target_count=effective,
+        effective_target_count=chosen_target,
         coverage_limited=is_limited,
         coverage_reason=reason,
         primary_available=primary_count,
         secondary_available=secondary_count,
         cross_domain_available=cross_count,
         supporting_available=supporting_count,
+        covered_domains=covered_domains,
+        uncovered_domains=uncovered_domains,
+        domain_coverage_limited=bool(uncovered_domains),
     )
 
 
@@ -242,11 +219,3 @@ def classify_course_for_path(course: Course, primary_domain: str, secondary_doma
     else:
         role = ROLE_OUT_OF_DOMAIN
     return role, {primary_domain: primary, **secondary}
-
-
-def known_skill_redundancy(course: Course, known_skill_codes: tuple[str, ...], known_skill_labels: tuple[str, ...]) -> bool:
-    if not known_skill_codes:
-        return False
-    text = _course_text(course)
-    introductory = any(token in text for token in ("beginner", "foundations", "fundamentals", "introduction", "introductory"))
-    return introductory and any(label.casefold() in text for label in known_skill_labels)

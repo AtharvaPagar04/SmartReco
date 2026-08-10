@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -19,14 +20,12 @@ from app.services.learning_path_policy import (
     ROLE_SUPPORTING,
     LearningPathCoverage,
     classify_course_for_path,
-    composition_policy,
-    known_skill_redundancy,
-    path_mode_for_effective_count,
     resolve_learning_path_coverage,
 )
 from app.services.learning_path_validator import validate_learning_path_plan
 from app.services.mesh_chat_service import MeshChatError, generate_learning_path_json
 from app.services.mesh_client import MeshConfigurationError
+from app.services.learning_path_logging import LearningPathTraceContext, log_learning_path_step
 from app.services.recommendation_retrieval_service import RecommendationCandidate
 
 logger = logging.getLogger(__name__)
@@ -66,6 +65,7 @@ class PlanGenerationResult:
     llm_attempted: bool = False
     llm_failure_reason: str | None = None
     prompt_candidate_count: int = 0
+    schema_validation_errors: tuple[dict, ...] = ()
 
 
 TOKEN_RE = re.compile(r"[a-z0-9][a-z0-9+#.-]*", re.I)
@@ -128,17 +128,15 @@ def _level_fit(course: Course, intent: LearningPathIntent) -> float:
     return max(0.0, 1.0 - 0.35 * distance)
 
 
-def _preference_fit(course: Course, intent: LearningPathIntent) -> float:
-    text = _tokens(_course_text(course))
-    score = 0.0
-    if "PRODUCTION" in intent.learning_preference_codes and text & {"production", "deployment", "reliability", "operations"}:
-        score += 0.55
-    if "PROJECTS" in intent.format_codes and course.final_project:
-        score += 0.45
-    return min(1.0, score)
-
-
-def pre_rank_candidates(candidates: list[RecommendationCandidate], intent: LearningPathIntent, profile: dict) -> list[RecommendationCandidate]:
+def pre_rank_candidates(
+    candidates: list[RecommendationCandidate],
+    intent: LearningPathIntent,
+    profile: dict,
+    *,
+    trace_context: LearningPathTraceContext | None = None,
+) -> list[RecommendationCandidate]:
+    trace_id = trace_context.trace_id if trace_context else "no_trace"
+    t0 = time.perf_counter()
     for candidate in candidates:
         role, affinities = classify_course_for_path(candidate.course, intent.primary_domain_code, intent.secondary_domain_codes)
         primary = affinities[intent.primary_domain_code].score
@@ -146,26 +144,21 @@ def pre_rank_candidates(candidates: list[RecommendationCandidate], intent: Learn
         domain = 0.65 * primary + 0.35 * secondary
         goal = _goal_fit(candidate.course, intent)
         level = _level_fit(candidate.course, intent)
-        preference = _preference_fit(candidate.course, intent)
         behavior = 0.0
         if profile.get("top_categories") and candidate.course.category.casefold() == str(profile["top_categories"][0].get("name", "")).casefold():
             behavior = 1.0
-        redundancy = 0.08 if known_skill_redundancy(candidate.course, intent.prior_skill_codes, intent.prior_skill_labels) else 0.0
         semantic = max(0.0, min(1.0, float(candidate.semantic_score or 0.0)))
         candidate.path_role = role
         candidate.primary_affinity = primary
         candidate.secondary_affinity = secondary
         candidate.goal_affinity = goal
         candidate.level_fit = level
-        candidate.preference_fit = preference
         candidate.path_score = round(
             DOMAIN_SCORE_WEIGHTS["semantic"] * semantic
             + DOMAIN_SCORE_WEIGHTS["domain"] * domain
             + DOMAIN_SCORE_WEIGHTS["goals"] * goal
             + DOMAIN_SCORE_WEIGHTS["level"] * level
-            + DOMAIN_SCORE_WEIGHTS["preferences"] * preference
-            + DOMAIN_SCORE_WEIGHTS["behavior"] * behavior
-            - redundancy,
+            + DOMAIN_SCORE_WEIGHTS["behavior"] * behavior,
             6,
         )
         candidate.evidence["learning_path"] = {
@@ -174,11 +167,47 @@ def pre_rank_candidates(candidates: list[RecommendationCandidate], intent: Learn
             "secondary_affinity": secondary,
             "goal_affinity": goal,
             "level_fit": level,
-            "preference_fit": preference,
-            "known_skill_redundancy": bool(redundancy),
             "path_score": candidate.path_score,
         }
-    return sorted(candidates, key=lambda item: (-item.path_score, -(item.semantic_score or 0.0), item.course.title.casefold(), item.course.id))
+
+    sorted_candidates = sorted(candidates, key=lambda item: (-item.path_score, -(item.semantic_score or 0.0), item.course.title.casefold(), item.course.id))
+    dur_ms = (time.perf_counter() - t0) * 1000
+
+    role_counts = {ROLE_PRIMARY: 0, ROLE_SECONDARY: 0, ROLE_CROSS_DOMAIN: 0, ROLE_SUPPORTING: 0, ROLE_OUT_OF_DOMAIN: 0}
+    for item in sorted_candidates:
+        if item.path_role in role_counts:
+            role_counts[item.path_role] += 1
+
+    log_learning_path_step(
+        logger,
+        "learning_path.step.success",
+        trace_id,
+        step="candidates.prerank",
+        duration_ms=dur_ms,
+        candidate_count=len(sorted_candidates),
+        primary_count=role_counts[ROLE_PRIMARY],
+        secondary_count=role_counts[ROLE_SECONDARY],
+        cross_domain_count=role_counts[ROLE_CROSS_DOMAIN],
+        supporting_count=role_counts[ROLE_SUPPORTING],
+        out_of_domain_count=role_counts[ROLE_OUT_OF_DOMAIN],
+    )
+
+    for item in sorted_candidates[:10]:
+        log_learning_path_step(
+            logger,
+            "learning_path.step.debug",
+            trace_id,
+            step="candidates.prerank_top",
+            course_id=item.course.id,
+            title=item.course.title,
+            role=item.path_role,
+            path_score=item.path_score,
+            semantic_score=item.semantic_score,
+            primary_affinity=item.primary_affinity,
+            secondary_affinity=item.secondary_affinity,
+        )
+
+    return sorted_candidates
 
 
 def _candidate_payload(candidate: RecommendationCandidate) -> dict:
@@ -205,15 +234,21 @@ def _candidate_payload(candidate: RecommendationCandidate) -> dict:
         "secondary_domain_affinity": candidate.secondary_affinity,
         "goal_alignment": candidate.goal_affinity,
         "level_fit": candidate.level_fit,
-        "preference_fit": candidate.preference_fit,
     }
 
 
-def select_fallback_courses(candidates: list[RecommendationCandidate], intent: LearningPathIntent, profile: dict, *, target_count: int | None = None, excluded_ids: set[str] | None = None) -> list[Course]:
-    ordered = pre_rank_candidates([item for item in candidates if item.course.id not in (excluded_ids or set())], intent, profile)
+def select_fallback_courses(
+    candidates: list[RecommendationCandidate],
+    intent: LearningPathIntent,
+    profile: dict,
+    *,
+    target_count: int | None = None,
+    excluded_ids: set[str] | None = None,
+    trace_context: LearningPathTraceContext | None = None,
+) -> list[Course]:
+    trace_id = trace_context.trace_id if trace_context else "no_trace"
+    ordered = pre_rank_candidates([item for item in candidates if item.course.id not in (excluded_ids or set())], intent, profile, trace_context=trace_context)
     needed_count = target_count if target_count is not None else intent.requested_course_count
-    policy_length = path_mode_for_effective_count(needed_count)
-    policy = composition_policy(policy_length, bool(intent.secondary_domain_codes))
     allowed = [item for item in ordered if item.path_role != ROLE_OUT_OF_DOMAIN]
     selected: list[RecommendationCandidate] = []
     budget = Decimal(intent.budget_amount) if intent.budget_type == "CUSTOM" and intent.budget_amount else {"FREE": Decimal("0"), "UNDER_50": Decimal("50"), "UNDER_100": Decimal("100"), "UNDER_200": Decimal("200")}.get(intent.budget_type)
@@ -230,28 +265,50 @@ def select_fallback_courses(candidates: list[RecommendationCandidate], intent: L
             return False
         return True
 
-    def add_matching(role_names: set[str], minimum: int) -> None:
-        nonlocal total
-        for item in allowed:
-            if len(selected) >= needed_count or len([chosen for chosen in selected if chosen.path_role in role_names]) >= minimum:
-                return
-            if item not in selected and item.path_role in role_names and affordable(item):
-                selected.append(item)
-                total += Decimal(str(item.course.price))
-
-    add_matching({ROLE_PRIMARY, ROLE_CROSS_DOMAIN}, policy["min_primary"])
-    add_matching({ROLE_SECONDARY, ROLE_CROSS_DOMAIN}, policy["min_secondary"])
-    supporting = sum(item.path_role == ROLE_SUPPORTING for item in selected)
     for item in allowed:
         if len(selected) >= needed_count or item in selected:
             continue
-        if item.path_role == ROLE_SUPPORTING and supporting >= policy["max_supporting"]:
-            continue
         if not affordable(item):
+            log_learning_path_step(
+                logger,
+                "learning_path.step.debug",
+                trace_id,
+                step="fallback.skipped_candidate",
+                course_id=item.course.id,
+                title=item.course.title,
+                reason="BUDGET",
+            )
             continue
         selected.append(item)
         total += Decimal(str(item.course.price))
-        supporting += item.path_role == ROLE_SUPPORTING
+
+    sel_roles = {ROLE_PRIMARY: 0, ROLE_SECONDARY: 0, ROLE_CROSS_DOMAIN: 0, ROLE_SUPPORTING: 0}
+    for item in selected:
+        if item.path_role in sel_roles:
+            sel_roles[item.path_role] += 1
+
+    log_learning_path_step(
+        logger,
+        "learning_path.step.success",
+        trace_id,
+        step="fallback.select",
+        selected_count=len(selected),
+        primary=sel_roles[ROLE_PRIMARY],
+        secondary=sel_roles[ROLE_SECONDARY],
+        cross_domain=sel_roles[ROLE_CROSS_DOMAIN],
+        supporting=sel_roles[ROLE_SUPPORTING],
+    )
+    for item in selected:
+        log_learning_path_step(
+            logger,
+            "learning_path.step.debug",
+            trace_id,
+            step="fallback.selected_course",
+            course_id=item.course.id,
+            title=item.course.title,
+            role=item.path_role,
+        )
+
     return [item.course for item in selected]
 
 
@@ -289,15 +346,55 @@ def fallback_plan(courses: list[Course], intent: LearningPathIntent) -> Learning
     )
 
 
-async def generate_plan_with_repairs(intent: LearningPathIntent, candidates: list[RecommendationCandidate], profile: dict) -> PlanGenerationResult:
-    ranked = pre_rank_candidates(candidates, intent, profile)
+async def generate_plan_with_repairs(
+    intent: LearningPathIntent,
+    candidates: list[RecommendationCandidate],
+    profile: dict,
+    *,
+    trace_context: LearningPathTraceContext | None = None,
+) -> PlanGenerationResult:
+    trace_id = trace_context.trace_id if trace_context else "no_trace"
+    ranked = pre_rank_candidates(candidates, intent, profile, trace_context=trace_context)
     coverage = resolve_learning_path_coverage(ranked, intent)
 
+    log_learning_path_step(
+        logger,
+        "learning_path.step.success",
+        trace_id,
+        step="coverage.resolve",
+        path_mode=intent.path_length,
+        requested_count=coverage.requested_count,
+        available_safe_count=coverage.available_safe_count,
+        effective_target_count=coverage.effective_target_count,
+        coverage_limited=coverage.coverage_limited,
+        coverage_reason=coverage.coverage_reason,
+        selected_domains=[intent.primary_domain_code, *intent.secondary_domain_codes],
+        eligible_course_count=coverage.available_safe_count,
+        covered_domains=coverage.covered_domains,
+        uncovered_domains=coverage.uncovered_domains,
+        domain_coverage_limited=coverage.domain_coverage_limited,
+        primary=coverage.primary_available,
+        secondary=coverage.secondary_available,
+        cross_domain=coverage.cross_domain_available,
+        supporting=coverage.supporting_available,
+    )
+    log_learning_path_step(
+        logger,
+        "learning_path.step.success",
+        trace_id,
+        step="domain.coverage",
+        covered_domains=coverage.covered_domains,
+        uncovered_domains=coverage.uncovered_domains,
+        domain_coverage_limited=coverage.domain_coverage_limited,
+    )
+
     if coverage.effective_target_count < 3:
+        if trace_context:
+            trace_context.record_failure("coverage.resolve", "INSUFFICIENT_COVERAGE")
         empty_plan = LearningPathPlan(
             title=f"Your {intent.primary_domain_label} learning path",
-            summary=f"Insufficient catalog coverage for {intent.primary_domain_label}.",
-            final_outcome="Catalog contains fewer than 3 aligned courses.",
+            summary=f"Insufficient aligned catalog coverage for {intent.primary_domain_label}.",
+            final_outcome="The catalog does not contain enough aligned courses for a roadmap.",
             stages=[],
         )
         return PlanGenerationResult(
@@ -306,18 +403,40 @@ async def generate_plan_with_repairs(intent: LearningPathIntent, candidates: lis
             repair_count=0,
             deterministic_fallback_used=False,
             validation_status="INSUFFICIENT_COVERAGE",
-            violations=({"code": "INSUFFICIENT_COVERAGE", "message": f"Catalog contains only {coverage.available_safe_count} safe courses; minimum required is 3."},),
+            violations=({"code": "INSUFFICIENT_COVERAGE", "message": f"Fewer than {3} aligned eligible courses were found. Eligible courses: {coverage.available_safe_count}."},),
             coverage=coverage,
             llm_attempted=False,
             llm_failure_reason=None,
             prompt_candidate_count=0,
+            schema_validation_errors=(),
         )
 
     safe_candidates = [c for c in ranked if c.path_role != ROLE_OUT_OF_DOMAIN]
-    prompt_sources = safe_candidates if safe_candidates else ranked
-    prompt_candidate_list = prompt_sources[:settings.learning_path_max_candidates]
+    prompt_candidate_list = safe_candidates[:coverage.effective_target_count]
     prompt_candidates = [_candidate_payload(candidate) for candidate in prompt_candidate_list]
     prompt_candidate_count = len(prompt_candidates)
+
+    log_learning_path_step(
+        logger,
+        "learning_path.step.success",
+        trace_id,
+        step="planner.prompt_candidates",
+        safe_candidate_count=len(safe_candidates),
+        prompt_candidate_count=prompt_candidate_count,
+        candidate_limit=settings.learning_path_max_candidates,
+        effective_target_count=coverage.effective_target_count,
+    )
+    for c in prompt_candidate_list:
+        log_learning_path_step(
+            logger,
+            "learning_path.step.debug",
+            trace_id,
+            step="planner.prompt_candidate_item",
+            course_id=c.course.id,
+            title=c.course.title,
+            role=c.path_role,
+            difficulty=c.course.difficulty,
+        )
 
     prompt_intent = intent.to_prompt_dict()
     prompt_intent.update(coverage.to_dict())
@@ -331,26 +450,157 @@ async def generate_plan_with_repairs(intent: LearningPathIntent, candidates: lis
     llm_failure_reason: str | None = None
     last_plan: dict | None = None
     last_violations: list[dict] = []
+    schema_validation_errors: list[dict] = []
     repair_count = 0
+    model = settings.learning_path_chat_model or settings.mesh_chat_model
     deadline = asyncio.get_running_loop().time() + settings.mesh_total_budget_seconds
 
     for attempt in range(settings.learning_path_max_repairs + 1):
         repair = None if attempt == 0 else {"previous_plan": last_plan, "violations": last_violations}
         remaining = deadline - asyncio.get_running_loop().time()
+        log_learning_path_step(
+            logger,
+            "learning_path.step.info",
+            trace_id,
+            step="planner.mesh_budget",
+            remaining_budget_seconds=round(remaining, 2),
+        )
         if remaining <= 0:
             if llm_attempted and llm_failure_reason is None:
                 llm_failure_reason = "MESH_TIMEOUT"
+            log_learning_path_step(
+                logger,
+                "learning_path.step.error",
+                trace_id,
+                step="planner.mesh_budget",
+                status="error",
+                reason="TOTAL_BUDGET_EXHAUSTED",
+            )
+            if trace_context:
+                trace_context.record_failure("planner.mesh_budget", "TOTAL_BUDGET_EXHAUSTED")
             break
 
+        if attempt > 0:
+            repair_reason = "SCHEMA" if (llm_failure_reason == "MESH_SCHEMA_VALIDATION_ERROR") else "DETERMINISTIC_VALIDATION"
+            log_learning_path_step(
+                logger,
+                "learning_path.step.start",
+                trace_id,
+                step="planner.repair",
+                repair_number=attempt,
+                repair_reason_type=repair_reason,
+                violation_codes=[v.get("code") for v in last_violations],
+                previous_stage_count=len(last_plan.get("stages", [])) if isinstance(last_plan, dict) and isinstance(last_plan.get("stages"), list) else 0,
+            )
+
+        attempt_type = "INITIAL" if attempt == 0 else "REPAIR"
         timeout_sec = min(settings.mesh_request_timeout_seconds, remaining)
         llm_attempted = True
+
+        log_learning_path_step(
+            logger,
+            "learning_path.step.start",
+            trace_id,
+            step="planner.mesh",
+            attempt_number=attempt,
+            attempt_type=attempt_type,
+            effective_target_count=coverage.effective_target_count,
+            prompt_candidate_count=prompt_candidate_count,
+            timeout_seconds=round(timeout_sec, 2),
+            model=model,
+        )
+
+        t_m = time.perf_counter()
         try:
             raw = await asyncio.wait_for(
                 generate_learning_path_json(intent=prompt_intent, candidates=prompt_candidates, repair=repair),
                 timeout=timeout_sec,
             )
+            m_dur = (time.perf_counter() - t_m) * 1000
+            if trace_context:
+                trace_context.mesh_attempt_count += 1
+                trace_context.mesh_attempt_durations_ms.append(int(m_dur))
+
             last_plan = raw
-            plan = LearningPathPlan.model_validate(raw)
+            stage_cnt = len(raw.get("stages", [])) if isinstance(raw, dict) and isinstance(raw.get("stages"), list) else 0
+
+            log_learning_path_step(
+                logger,
+                "learning_path.step.success",
+                trace_id,
+                step="planner.mesh",
+                duration_ms=m_dur,
+                response_received=True,
+                stage_count=stage_cnt,
+            )
+
+            if isinstance(raw, dict):
+                log_learning_path_step(
+                    logger,
+                    "learning_path.step.debug",
+                    trace_id,
+                    step="planner.mesh_response",
+                    top_level_keys=list(raw.keys()),
+                    stage_count=stage_cnt,
+                    stage_keys=list(raw.get("stages", [{}])[0].keys()) if stage_cnt > 0 and isinstance(raw.get("stages")[0], dict) else [],
+                    response_character_count=len(json.dumps(raw)),
+                )
+
+            t_v = time.perf_counter()
+            try:
+                plan = LearningPathPlan.model_validate(raw)
+                val_dur = (time.perf_counter() - t_v) * 1000
+                log_learning_path_step(
+                    logger,
+                    "learning_path.step.success",
+                    trace_id,
+                    step="planner.schema_validation",
+                    duration_ms=val_dur,
+                    stage_count=len(plan.stages),
+                )
+            except ValidationError as val_exc:
+                val_dur = (time.perf_counter() - t_v) * 1000
+                last_plan = raw
+                schema_errs = [
+                    {
+                        "location": [str(x) for x in err.get("loc", ())],
+                        "type": str(err.get("type", "")),
+                    }
+                    for err in val_exc.errors()
+                ]
+                schema_validation_errors.extend(schema_errs)
+                last_violations = [
+                    {
+                        "code": "SCHEMA_VALIDATION_ERROR",
+                        "message": _sanitize_log_message(err.get("msg", "")),
+                        "details": {
+                            "location": [str(x) for x in err.get("loc", ())],
+                            "type": str(err.get("type", "")),
+                        },
+                    }
+                    for err in val_exc.errors()
+                ]
+                llm_failure_reason = "MESH_SCHEMA_VALIDATION_ERROR"
+                locations = [":".join(str(x) for x in err.get("loc", ())) for err in val_exc.errors()]
+                types = [str(err.get("type", "")) for err in val_exc.errors()]
+
+                log_learning_path_step(
+                    logger,
+                    "learning_path.step.warning",
+                    trace_id,
+                    step="planner.schema_validation",
+                    duration_ms=val_dur,
+                    error_count=len(val_exc.errors()),
+                    locations=locations,
+                    types=types,
+                )
+                if trace_context:
+                    trace_context.record_failure("planner.schema_validation", "MESH_SCHEMA_VALIDATION_ERROR")
+
+                if attempt < settings.learning_path_max_repairs:
+                    repair_count += 1
+                continue
+
             validation = validate_learning_path_plan(
                 plan.model_dump(),
                 intent,
@@ -363,6 +613,37 @@ async def generate_plan_with_repairs(intent: LearningPathIntent, candidates: lis
                     status = "VALID_COVERAGE_LIMITED" if attempt == 0 else "REPAIRED_COVERAGE_LIMITED"
                 else:
                     status = "VALID" if attempt == 0 else "REPAIRED_VALID"
+
+                p_roles = {ROLE_PRIMARY: 0, ROLE_SECONDARY: 0, ROLE_CROSS_DOMAIN: 0, ROLE_SUPPORTING: 0}
+                candidate_by_id = {c.course.id: c for c in ranked}
+                for st in plan.stages:
+                    cand = candidate_by_id.get(st.course_id)
+                    if cand and cand.path_role in p_roles:
+                        p_roles[cand.path_role] += 1
+
+                log_learning_path_step(
+                    logger,
+                    "learning_path.step.success",
+                    trace_id,
+                    step="planner.validation",
+                    stage_count=len(plan.stages),
+                    primary=p_roles[ROLE_PRIMARY],
+                    secondary=p_roles[ROLE_SECONDARY],
+                    cross_domain=p_roles[ROLE_CROSS_DOMAIN],
+                    supporting=p_roles[ROLE_SUPPORTING],
+                    goal_coverage_status="COMPLETE",
+                )
+
+                if attempt > 0:
+                    log_learning_path_step(
+                        logger,
+                        "learning_path.step.success",
+                        trace_id,
+                        step="planner.repair",
+                        repair_number=attempt,
+                        status="repaired_successfully",
+                    )
+
                 return PlanGenerationResult(
                     plan=plan,
                     llm_generation_used=True,
@@ -374,35 +655,61 @@ async def generate_plan_with_repairs(intent: LearningPathIntent, candidates: lis
                     llm_attempted=True,
                     llm_failure_reason=None,
                     prompt_candidate_count=prompt_candidate_count,
+                    schema_validation_errors=tuple(schema_validation_errors),
                 )
+
             last_violations = [item.to_dict() for item in validation.violations]
             llm_failure_reason = "MESH_VALIDATION_VIOLATION"
-            logger.warning(
-                "Mesh learning-path plan failed validation on attempt %d: violations=%s (target=%d, candidate_count=%d, timeout=%.2f)",
-                attempt,
-                [v.code for v in validation.violations],
-                coverage.effective_target_count,
-                prompt_candidate_count,
-                timeout_sec,
+            v_codes = [v.code for v in validation.violations]
+            v_details = [v.to_dict() for v in validation.violations]
+
+            log_learning_path_step(
+                logger,
+                "learning_path.step.warning",
+                trace_id,
+                step="planner.validation",
+                violation_count=len(validation.violations),
+                violation_codes=v_codes,
+                violation_details=v_details,
             )
+            if trace_context:
+                trace_context.record_failure("planner.validation", f"VALIDATION_VIOLATION:{','.join(v_codes)}")
+
             if attempt < settings.learning_path_max_repairs:
                 repair_count += 1
         except Exception as exc:
+            m_dur = (time.perf_counter() - t_m) * 1000
+            if trace_context:
+                trace_context.mesh_attempt_count += 1
+                trace_context.mesh_attempt_durations_ms.append(int(m_dur))
             llm_failure_reason = _classify_exception(exc)
-            logger.warning(
-                "Mesh learning-path planner failed attempt %d: [%s] %s (target=%d, candidate_count=%d, timeout=%.2f)",
-                attempt,
-                exc.__class__.__name__,
-                _sanitize_log_message(str(exc)),
-                coverage.effective_target_count,
-                prompt_candidate_count,
-                timeout_sec,
+
+            log_learning_path_step(
+                logger,
+                "learning_path.step.error",
+                trace_id,
+                step="planner.mesh",
+                duration_ms=m_dur,
+                exception_class=exc.__class__.__name__,
+                classified_error=llm_failure_reason,
             )
+            if trace_context:
+                trace_context.record_failure("planner.mesh", llm_failure_reason)
+
             if attempt < settings.learning_path_max_repairs:
                 repair_count += 1
 
-    fallback_courses = select_fallback_courses(ranked, intent, profile, target_count=coverage.effective_target_count)
+    log_learning_path_step(
+        logger,
+        "learning_path.step.start",
+        trace_id,
+        step="fallback.select",
+        target_count=coverage.effective_target_count,
+        safe_candidate_count=len([c for c in ranked if c.path_role != ROLE_OUT_OF_DOMAIN]),
+    )
+    fallback_courses = select_fallback_courses(ranked, intent, profile, target_count=coverage.effective_target_count, trace_context=trace_context)
     plan = fallback_plan(fallback_courses, intent)
+
     validation = validate_learning_path_plan(
         plan.model_dump(),
         intent,
@@ -412,8 +719,27 @@ async def generate_plan_with_repairs(intent: LearningPathIntent, candidates: lis
     )
     if validation.valid:
         status = "FALLBACK_COVERAGE_LIMITED" if coverage.coverage_limited else "FALLBACK_VALID"
+        log_learning_path_step(
+            logger,
+            "learning_path.step.success",
+            trace_id,
+            step="fallback.validation",
+            validation_status=status,
+        )
     else:
         status = "FAILED"
+        v_codes = [v.code for v in validation.violations]
+        v_details = [v.to_dict() for v in validation.violations]
+        log_learning_path_step(
+            logger,
+            "learning_path.step.error",
+            trace_id,
+            step="fallback.validation",
+            violation_codes=v_codes,
+            violation_details=v_details,
+        )
+        if trace_context:
+            trace_context.record_failure("fallback.validation", "FALLBACK_VALIDATION_FAILED")
 
     return PlanGenerationResult(
         plan=plan,
@@ -426,4 +752,5 @@ async def generate_plan_with_repairs(intent: LearningPathIntent, candidates: lis
         llm_attempted=llm_attempted,
         llm_failure_reason=llm_failure_reason,
         prompt_candidate_count=prompt_candidate_count,
+        schema_validation_errors=tuple(schema_validation_errors),
     )

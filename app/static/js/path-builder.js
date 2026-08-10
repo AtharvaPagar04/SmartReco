@@ -10,7 +10,7 @@
 
   const inputs = group => [...group.querySelectorAll('input[type="checkbox"], input[type="radio"]')];
   const selected = group => inputs(group).filter(input => input.checked);
-  const limitText = name => name === 'learning_preferences' ? 'learning preferences' : name.replaceAll('_', ' ');
+  const limitText = name => name.replaceAll('_', ' ');
 
   function setError(group, message = '') {
     const error = group.querySelector('[data-choice-error]');
@@ -90,11 +90,12 @@
   function renderReview() {
     const target = form.querySelector('[data-review]'); if (!target) return;
     target.replaceChildren();
-    const rows = [['Domains', 'selected_domains'], ['Learning goals', 'goals'], ['Current level', 'level'], ['Learning preferences', 'learning_preferences'], ['Prior skills', 'prior_skills'], ['Format preferences', 'format_preferences'], ['Weekly time', 'weekly_hours'], ['Path size', 'path_length'], ['Additional instruction', 'optional_instruction']];
+    const rows = [['Domains', 'selected_domains'], ['Learning goals', 'goals'], ['Current level', 'level'], ['Weekly time', 'weekly_hours'], ['Desired horizon', 'target_weeks'], ['Path size', 'path_length'], ['Budget', 'budget_type']];
     rows.forEach(([title, name]) => {
       const item = document.createElement('div'); item.className = 'review-item'; const strong = document.createElement('strong'); strong.textContent = title; const text = document.createElement('span');
       const checked = [...form.querySelectorAll(`[name="${name}"]:checked`)].map(input => input.closest('label')?.querySelector('strong')?.textContent || input.value);
-      text.textContent = name === 'weekly_hours' ? `${form.elements[name].value || '0'} hours/week` : name === 'optional_instruction' ? (form.elements[name].value || 'None') : name === 'path_length' ? ({FOCUSED: 'Focused path — 3–4 courses', BALANCED: 'Balanced path — 6–7 courses', EXTENDED: 'Deep path — 8 courses', DEEP: 'Deep path — 8 courses', AUTO: 'Let SmartReco decide — 3–8 courses'}[form.elements[name].value] || 'Let SmartReco decide — 3–8 courses') : checked.join(', ') || 'Not selected'; item.append(strong, text); target.append(item);
+      const value = form.elements[name]?.value || '';
+      text.textContent = name === 'weekly_hours' ? `${value || '0'} hours/week` : name === 'target_weeks' ? ({'': 'Flexible', 1: '1 week', 4: '1 month', 8: '2 months', 12: '3 months'}[value] || 'Flexible') : name === 'path_length' ? ({FOCUSED: 'Focused path — 3–4 courses', BALANCED: 'Balanced path — 6–7 courses', EXTENDED: 'Deep path — 8 courses', DEEP: 'Deep path — 8 courses', AUTO: 'Let SmartReco decide — 3–8 courses'}[value] || 'Let SmartReco decide — 3–8 courses') : name === 'budget_type' ? ({FREE: 'Free courses only', UNDER_50: 'Under USD 50', UNDER_100: 'Under USD 100', UNDER_200: 'Under USD 200', FLEXIBLE: 'Flexible', CUSTOM: 'Custom maximum'}[value] || 'Flexible') : checked.join(', ') || 'Not selected'; item.append(strong, text); target.append(item);
     });
   }
 

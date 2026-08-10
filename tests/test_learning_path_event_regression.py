@@ -48,7 +48,6 @@ async def test_post_path_generation_flow(client, db_session, regular_user, cours
             "primary_domain": "PYTHON",
             "goals": ["PROJECTS"],
             "level": "BEGINNER",
-            "learning_preferences": ["PROJECTS"],
             "weekly_hours": "5",
             "budget_type": "FLEXIBLE",
             "budget_scope": "PATH",

@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
@@ -22,6 +23,14 @@ async def lifespan(app: FastAPI):
     if settings.run_migrations_on_start:
         await run_migrations()
     await check_schema_readiness(engine)
+
+    configure_logging(settings.log_level)
+    logger = logging.getLogger("app")
+    logger.info(
+        "smartreco.logging.ready configured_level=%s effective_app_level=%s",
+        settings.log_level,
+        logging.getLevelName(logger.getEffectiveLevel()),
+    )
 
     scheduler = build_scheduler()
     scheduler.start()

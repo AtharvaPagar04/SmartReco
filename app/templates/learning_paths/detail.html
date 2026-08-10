@@ -11,7 +11,7 @@
 </div>
 <p class="eyebrow">Learning roadmap</p><h1>{{ path.title }}</h1><p class="lede">We could not build a full roadmap matching all of your criteria without including out-of-domain courses.</p>
 <div class="path-actions">
-  <a class="button" href="/path-builder">Edit path preferences</a>
+  <a class="button" href="/path-builder?edit_path_id={{ path.id }}">Edit path inputs</a>
   <a class="button secondary" href="/catalog">Browse catalog</a>
   <form method="post" action="/learning-paths/{{ path.id }}/archive"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button secondary" type="submit">Archive</button></form>
 </div>
@@ -19,12 +19,12 @@
 {% elif path.status == 'FAILED' %}
 <div class="alert warning generation-failed-banner" role="status">
   <strong>We couldn't generate your learning path this time</strong>
-  <p>Your preferences have enough matching courses, but generation did not complete successfully. Please try again.</p>
+  <p>There are enough matching courses, but generation did not complete successfully. Please try again.</p>
 </div>
-<p class="eyebrow">Learning roadmap</p><h1>{{ path.title }}</h1><p class="lede">Generation failed to complete. You can try regenerating or update your preferences.</p>
+<p class="eyebrow">Learning roadmap</p><h1>{{ path.title }}</h1><p class="lede">Generation failed to complete. You can try regenerating or update your path inputs.</p>
 <div class="path-actions">
   <form method="post" action="/learning-paths/{{ path.id }}/regenerate"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button" type="submit">Regenerate path</button></form>
-  <a class="button secondary" href="/path-builder">Edit path preferences</a>
+  <a class="button secondary" href="/path-builder?edit_path_id={{ path.id }}">Edit path inputs</a>
   <a class="button secondary" href="/catalog">Browse catalog</a>
   <form method="post" action="/learning-paths/{{ path.id }}/archive"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button secondary" type="submit">Archive</button></form>
 </div>

@@ -26,9 +26,7 @@ def make_course(title: str, category: str, difficulty: str = "INTERMEDIATE", tag
 def exact_input() -> LearningPathInput:
     return LearningPathInput(
         primary_domain="FRONTEND", secondary_domains=["UX"], goals=["PRODUCTION", "ADVANCED"],
-        level="FAMILIAR", learning_preferences=["PRODUCTION"],
-        prior_skills=["PYTHON", "GIT", "APIS", "PROMPT_ENGINEERING"],
-        format_preferences=["PRACTICE", "PROJECTS"], weekly_hours=5, path_length="DEEP",
+        level="FAMILIAR", weekly_hours=5, path_length="DEEP",
     )
 
 
@@ -48,12 +46,12 @@ def candidates() -> list[RecommendationCandidate]:
     return [RecommendationCandidate(course=course, semantic_score=0.8) for course in courses]
 
 
-def test_intent_preserves_all_goals_and_separates_known_skills():
+def test_intent_preserves_current_builder_inputs_only():
     intent = LearningPathIntent.from_input(exact_input())
     assert intent.goal_codes == ("PRODUCTION", "ADVANCED")
-    assert intent.prior_skill_codes == ("PYTHON", "GIT", "APIS", "PROMPT_ENGINEERING")
     assert intent.to_prompt_dict()["targets"]["goals"] == ["Build a production application", "Understand advanced concepts"]
-    assert intent.to_prompt_dict()["known_skills"] == ["Python", "Git", "APIs", "Prompt Engineering"]
+    assert not any("preference" in key or "skill" in key or "instruction" in key for key in intent.to_prompt_dict())
+    assert "preferences" not in dict(intent.retrieval_queries())
 
 
 def test_taxonomy_collision_does_not_make_fastapi_frontend_primary():
@@ -66,7 +64,7 @@ def test_taxonomy_collision_does_not_make_fastapi_frontend_primary():
     assert classify_course_domain_affinity(performance, "FRONTEND").score >= 0.50
 
 
-def test_fallback_meets_domain_composition_and_excludes_agentic_ai():
+def test_fallback_selects_aligned_courses_and_excludes_out_of_domain():
     intent = LearningPathIntent.from_input(exact_input())
     selected = select_fallback_courses(candidates(), intent, {})
     titles = [course.title for course in selected]
@@ -320,15 +318,15 @@ def test_auto_target_resolution_matrix():
         assert cov2.effective_target_count == 2
         assert cov2.coverage_limited is True
 
-        # safe = 3
-        cov3 = resolve_learning_path_coverage(scarce[:3], intent)
+        # safe = 3 (2 primary + 1 secondary); AUTO targets up to 8.
+        cov3 = resolve_learning_path_coverage([scarce[0], scarce[1], scarce[4]], intent)
         assert cov3.effective_target_count == 3
-        assert cov3.coverage_limited is False
+        assert cov3.coverage_limited is True
 
         # safe = 6
         cov6 = resolve_learning_path_coverage(scarce[:6], intent)
         assert cov6.effective_target_count == 6
-        assert cov6.coverage_limited is False
+        assert cov6.coverage_limited is True
 
         # safe = 8
         cov8 = resolve_learning_path_coverage(all_items[:8], intent)
@@ -341,20 +339,21 @@ def test_auto_target_resolution_matrix():
         assert cov12.coverage_limited is False
 
 
-def test_composition_policy_effective_count_mapping():
-    from app.services.learning_path_policy import composition_policy, path_mode_for_effective_count
+def test_coverage_uses_aligned_count_without_domain_quotas():
+    from app.services.learning_path_policy import resolve_learning_path_coverage
 
-    assert path_mode_for_effective_count(3) == "FOCUSED"
-    assert path_mode_for_effective_count(4) == "FOCUSED"
-    assert path_mode_for_effective_count(5) == "BALANCED"
-    assert path_mode_for_effective_count(6) == "BALANCED"
-    assert path_mode_for_effective_count(7) == "BALANCED"
-    assert path_mode_for_effective_count(8) == "EXTENDED"
+    intent = LearningPathIntent.from_input(exact_input())
+    primary = candidates()[0]
+    secondary = candidates()[4:7]
+    extra_secondary = [
+        RecommendationCandidate(make_course("UX Research for Product Interfaces", "UI/UX Design", tags=["ux", "research", "interfaces"]), semantic_score=0.8),
+        RecommendationCandidate(make_course("Usability Testing and Interaction Flows", "UI/UX Design", tags=["usability", "interaction", "ux"]), semantic_score=0.8),
+    ]
+    coverage = resolve_learning_path_coverage([primary, *secondary, *extra_secondary], intent)
 
-    pol6 = composition_policy(path_mode_for_effective_count(6), has_secondary=True)
-    assert pol6["min_primary"] == 3
-    assert pol6["min_secondary"] == 1
-    assert pol6["max_supporting"] == 1
+    assert coverage.available_safe_count == 6
+    assert coverage.effective_target_count == 6
+    assert coverage.domain_coverage_limited is False
 
 
 def test_known_six_course_role_pass():
@@ -618,5 +617,113 @@ async def test_mesh_candidate_limit_never_exceeded(monkeypatch):
     monkeypatch.setattr(settings, "learning_path_max_candidates", 16)
 
     result = await generate_plan_with_repairs(intent, many_candidates, {})
-    assert result.prompt_candidate_count == 16
-    assert len(captured_prompt_candidates) == 16
+    assert result.prompt_candidate_count == 8
+    assert len(captured_prompt_candidates) == 8
+
+
+@pytest.mark.asyncio
+async def test_mesh_schema_repair_goal_codes_wrong_type(monkeypatch):
+    intent = LearningPathIntent.from_input(exact_input())
+    items = candidates()[:8]
+    calls = []
+
+    async def fake_mesh(*, intent, candidates, repair=None):
+        calls.append(repair)
+        if repair is None:
+            plan = valid_plan(intent, items)
+            plan["stages"][0]["goal_codes"] = "PRODUCTION"
+            return plan
+        return valid_plan(intent, items)
+
+    monkeypatch.setattr("app.services.learning_path_planner.generate_learning_path_json", fake_mesh)
+    result = await generate_plan_with_repairs(intent, items, {})
+
+    assert result.llm_generation_used is True
+    assert result.deterministic_fallback_used is False
+    assert result.repair_count == 1
+    assert len(calls) == 2
+    assert calls[1]["violations"][0]["code"] == "SCHEMA_VALIDATION_ERROR"
+    assert calls[1]["violations"][0]["details"]["location"] == ["stages", "0", "goal_codes"]
+    assert result.schema_validation_errors[0]["location"] == ["stages", "0", "goal_codes"]
+
+
+@pytest.mark.asyncio
+async def test_mesh_schema_repair_null_explanation_field(monkeypatch):
+    intent = LearningPathIntent.from_input(exact_input())
+    items = candidates()[:8]
+    calls = []
+
+    async def fake_mesh(*, intent, candidates, repair=None):
+        calls.append(repair)
+        if repair is None:
+            plan = valid_plan(intent, items)
+            plan["stages"][1]["why_this_course"] = None
+            return plan
+        return valid_plan(intent, items)
+
+    monkeypatch.setattr("app.services.learning_path_planner.generate_learning_path_json", fake_mesh)
+    result = await generate_plan_with_repairs(intent, items, {})
+
+    assert result.llm_generation_used is True
+    assert result.repair_count == 1
+    assert calls[1]["violations"][0]["code"] == "SCHEMA_VALIDATION_ERROR"
+    assert calls[1]["violations"][0]["details"]["location"] == ["stages", "1", "why_this_course"]
+
+
+@pytest.mark.asyncio
+async def test_mesh_cannot_override_grounded_ids(monkeypatch):
+    intent = LearningPathIntent.from_input(exact_input())
+    items = candidates()[:8]
+
+    async def fake_mesh(*, intent, candidates, repair=None):
+        plan = valid_plan(intent, items)
+        plan["stages"][0]["course_id"] = "fake-invented-course-id"
+        return plan
+
+    monkeypatch.setattr("app.services.learning_path_planner.generate_learning_path_json", fake_mesh)
+    monkeypatch.setattr(settings, "learning_path_max_repairs", 0)
+
+    result = await generate_plan_with_repairs(intent, items, {})
+    assert result.llm_generation_used is False
+    assert result.deterministic_fallback_used is True
+    assert result.llm_failure_reason == "MESH_VALIDATION_VIOLATION"
+
+
+@pytest.mark.asyncio
+async def test_fallback_failure_metadata_contains_validation_violations(db_session, regular_user, monkeypatch):
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+    from app.models.learning_path import LearningPath, LearningPathStatus
+    from app.services.learning_path_service import create_learning_path
+    from app.services.mesh_chat_service import MeshChatError
+
+    base = exact_input().model_dump(mode="json")
+    path_input = LearningPathInput.model_validate(base)
+
+    items = scarce_candidates()[:2]
+    for candidate in items:
+        db_session.add(candidate.course)
+    await db_session.flush()
+
+    async def failing_mesh(*args, **kwargs):
+        raise MeshChatError("Mesh error")
+
+    async def mock_retrieve(*args, **kwargs):
+        return (items, True, False, ["query"])
+
+    monkeypatch.setattr("app.services.learning_path_planner.generate_learning_path_json", failing_mesh)
+    monkeypatch.setattr("app.services.learning_path_service.retrieve_learning_path_candidates", mock_retrieve)
+
+    path = await create_learning_path(db_session, regular_user, path_input)
+    await db_session.commit()
+
+    reloaded = await db_session.scalar(
+        select(LearningPath).where(LearningPath.id == path.id).options(selectinload(LearningPath.generation_runs))
+    )
+    assert reloaded.status == LearningPathStatus.INSUFFICIENT_COVERAGE
+
+    run = reloaded.generation_runs[0]
+    meta = run.metadata_json
+    assert "validation_violations" in meta
+    assert len(meta["validation_violations"]) > 0
+    assert meta["validation_violations"][0]["code"] == "INSUFFICIENT_COVERAGE"

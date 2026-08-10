@@ -12,10 +12,7 @@ from app.services.learning_path_policy import (
     ROLE_SECONDARY,
     ROLE_SUPPORTING,
     classify_course_for_path,
-    composition_policy,
-    known_skill_redundancy,
-    path_mode_for_effective_count,
-)
+    )
 from app.services.recommendation_retrieval_service import RecommendationCandidate
 
 
@@ -37,12 +34,6 @@ class ValidationResult:
     valid: bool
     violations: tuple[ValidationViolation, ...]
     classifications: tuple[dict, ...]
-
-
-def _policy_for(intent: LearningPathIntent, effective_target_count: int | None = None) -> dict[str, int]:
-    target = effective_target_count if effective_target_count is not None else intent.requested_course_count
-    length = path_mode_for_effective_count(target)
-    return composition_policy(length, bool(intent.secondary_domain_codes))
 
 
 def _budget_limit(intent: LearningPathIntent) -> Decimal | None:
@@ -103,22 +94,8 @@ def validate_learning_path_plan(
         selected.append((course, role, stage))
         if role == ROLE_OUT_OF_DOMAIN:
             violations.append(ValidationViolation("OUT_OF_DOMAIN", f"{course.title} does not align with the requested domains.", {"course_id": course.id}))
-        if known_skill_redundancy(course, intent.prior_skill_codes, intent.prior_skill_labels):
-            violations.append(ValidationViolation("KNOWN_SKILL_REDUNDANCY", f"{course.title} repeats an introductory known skill.", {"course_id": course.id}))
-
     if not selected:
         violations.append(ValidationViolation("EMPTY_PLAN", "The roadmap contains no grounded courses."))
-    policy = _policy_for(intent, effective_target_count=target_count)
-    primary_count = sum(role in {ROLE_PRIMARY, ROLE_CROSS_DOMAIN} for _, role, _ in selected)
-    secondary_count = sum(role in {ROLE_SECONDARY, ROLE_CROSS_DOMAIN} for _, role, _ in selected)
-    supporting_count = sum(role == ROLE_SUPPORTING for _, role, _ in selected)
-    if primary_count < policy["min_primary"]:
-        violations.append(ValidationViolation("PRIMARY_DOMAIN_COVERAGE", "The roadmap does not meet primary-domain coverage.", {"actual": primary_count, "minimum": policy["min_primary"]}))
-    if secondary_count < policy["min_secondary"]:
-        violations.append(ValidationViolation("SECONDARY_DOMAIN_COVERAGE", "The roadmap does not meet secondary-domain coverage.", {"actual": secondary_count, "minimum": policy["min_secondary"]}))
-    if supporting_count > policy["max_supporting"]:
-        violations.append(ValidationViolation("SUPPORTING_LIMIT", "The roadmap contains too many supporting courses.", {"actual": supporting_count, "maximum": policy["max_supporting"]}))
-
     selected_goals = set()
     for _, _, stage in selected:
         stage_goals = set(stage.get("goal_codes") or [])

@@ -141,7 +141,12 @@ async def test_qdrant_vector_store_upsert_and_delete(tmp_path, monkeypatch, cour
 
 
 @pytest.mark.asyncio
-async def test_scheduler_jobs_create_fresh_async_sessions(db_session, course):
+async def test_scheduler_jobs_create_fresh_async_sessions(db_session, course, monkeypatch):
+    async def fake_embed(_course):
+        return [0.1] * settings.vector_size
+
+    monkeypatch.setattr(sync_service, "embed_course", fake_embed)
+
     job = VectorOutbox(
         course_id=course.id,
         operation="UPSERT",

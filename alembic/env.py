@@ -10,7 +10,10 @@ from app.config import settings
 from app.models import Base
 
 if context.config.config_file_name:
-    fileConfig(context.config.config_file_name)
+    fileConfig(
+        context.config.config_file_name,
+        disable_existing_loggers=False,
+    )
 
 target_metadata = Base.metadata
 

@@ -51,9 +51,7 @@ def _profile_for_input(path_input: LearningPathInput, profile: dict) -> dict:
     merged = dict(profile)
     merged["top_categories"] = [{"name": category} for domain in domains for category in domain.categories] + profile.get("top_categories", [])[:3]
     merged["top_tags"] = [{"name": tag} for domain in domains for tag in domain.tags] + profile.get("top_tags", [])[:5]
-    merged["top_search_terms"] = [{"term": value} for value in (*intent.goal_labels, *intent.learning_preference_labels, *intent.format_labels)] + profile.get("top_search_terms", [])[:3]
-    if path_input.optional_instruction:
-        merged["top_search_terms"].append({"term": path_input.optional_instruction})
+    merged["top_search_terms"] = [{"term": value} for value in intent.goal_labels] + profile.get("top_search_terms", [])[:3]
     merged["confidence"] = 1.0
     merged["learning_path_intent"] = intent.to_prompt_dict()
     return merged
@@ -90,19 +88,95 @@ async def candidate_courses(db: AsyncSession, user: User, path_input: LearningPa
     }
 
 
-async def _reload_selected_courses(db: AsyncSession, plan: PlanGenerationResult) -> list[tuple[object, Course]]:
+import logging
+import time
+
+from app.services.learning_path_logging import LearningPathTraceContext, log_learning_path_step
+from app.services.learning_path_policy import ROLE_CROSS_DOMAIN, ROLE_PRIMARY, ROLE_SECONDARY, ROLE_SUPPORTING, classify_course_for_path
+
+logger = logging.getLogger(__name__)
+
+
+async def _reload_selected_courses(db: AsyncSession, plan: PlanGenerationResult, *, trace_context: LearningPathTraceContext | None = None) -> list[tuple[object, Course]]:
+    trace_id = trace_context.trace_id if trace_context else "no_trace"
+    t_rel = time.perf_counter()
     ids = [stage.course_id for stage in plan.plan.stages]
     rows = list((await db.scalars(select(Course).where(Course.id.in_(ids), Course.is_active.is_(True)))).all()) if ids else []
     courses = {course.id: course for course in rows}
+    rel_dur = (time.perf_counter() - t_rel) * 1000
+
+    requested_count = len(ids)
+    loaded_count = len(rows)
+    missing_count = requested_count - loaded_count
+
+    log_learning_path_step(
+        logger,
+        "learning_path.step.success",
+        trace_id,
+        step="persistence.course_reload",
+        duration_ms=rel_dur,
+        requested_ids_count=requested_count,
+        loaded_courses_count=loaded_count,
+        missing_ids_count=missing_count,
+    )
+    if missing_count > 0:
+        missing_ids = list(set(ids) - set(courses.keys()))
+        log_learning_path_step(
+            logger,
+            "learning_path.step.warning",
+            trace_id,
+            step="persistence.course_reload",
+            missing_course_ids=missing_ids,
+        )
+        if trace_context:
+            trace_context.record_failure("persistence.course_reload", "MISSING_COURSES")
+
     return [(stage, courses[stage.course_id]) for stage in plan.plan.stages if stage.course_id in courses]
 
 
-async def create_learning_path(db: AsyncSession, user: User, path_input: LearningPathInput, *, status: str = "READY") -> LearningPath:
+async def create_learning_path(db: AsyncSession, user: User, path_input: LearningPathInput, *, status: str = "READY", trace_context: LearningPathTraceContext | None = None) -> LearningPath:
+    if trace_context is None:
+        trace_context = LearningPathTraceContext()
+    trace_id = trace_context.trace_id
+
+    t_intent = time.perf_counter()
     intent = LearningPathIntent.from_input(path_input)
+    intent_dur = (time.perf_counter() - t_intent) * 1000
+
+    log_learning_path_step(
+        logger,
+        "learning_path.step.success",
+        trace_id,
+        step="intent.build",
+        duration_ms=intent_dur,
+        primary_domain_code=intent.primary_domain_code,
+        secondary_domain_codes=list(intent.secondary_domain_codes),
+        goal_codes=list(intent.goal_codes),
+        level_code=intent.level_code,
+        path_length=intent.path_length,
+        requested_course_count=intent.requested_course_count,
+        auto_mode=intent.path_length == "AUTO",
+    )
+
+    t_prof = time.perf_counter()
     profile_row = await build_or_refresh_profile(db, user.id)
     profile = _profile_for_input(path_input, profile_row.profile_json or {})
+    prof_dur = (time.perf_counter() - t_prof) * 1000
+
+    log_learning_path_step(
+        logger,
+        "learning_path.step.success",
+        trace_id,
+        step="profile.load",
+        duration_ms=prof_dur,
+        top_category_count=len(profile.get("top_categories", [])),
+        top_tag_count=len(profile.get("top_tags", [])),
+        top_search_term_count=len(profile.get("top_search_terms", [])),
+        profile_available=bool(profile_row.profile_json),
+    )
+
     limit = max(settings.learning_path_max_candidates, intent.requested_course_count * 3)
-    trace_id = None
+
     if tracing_enabled():
         try:
             from langsmith import trace
@@ -117,16 +191,31 @@ async def create_learning_path(db: AsyncSession, user: User, path_input: Learnin
                 "secondary_domain_count": len(intent.secondary_domain_codes),
                 "goal_count": len(intent.goal_codes),
             }) as span:
-                candidates, semantic_used, sql_used, queries = await retrieve_learning_path_candidates(db, intent, profile, limit=limit)
-                plan_result = await generate_plan_with_repairs(intent, candidates, profile)
-                trace_id = str(getattr(span, "id", "")) or None
+                t_ret = time.perf_counter()
+                candidates, semantic_used, sql_used, queries = await retrieve_learning_path_candidates(db, intent, profile, limit=limit, trace_context=trace_context)
+                trace_context.retrieval_duration_ms = int((time.perf_counter() - t_ret) * 1000)
+
+                t_plan = time.perf_counter()
+                plan_result = await generate_plan_with_repairs(intent, candidates, profile, trace_context=trace_context)
+                trace_context.planner_duration_ms = int((time.perf_counter() - t_plan) * 1000)
         else:
-            candidates, semantic_used, sql_used, queries = await retrieve_learning_path_candidates(db, intent, profile, limit=limit)
-            plan_result = await generate_plan_with_repairs(intent, candidates, profile)
+            t_ret = time.perf_counter()
+            candidates, semantic_used, sql_used, queries = await retrieve_learning_path_candidates(db, intent, profile, limit=limit, trace_context=trace_context)
+            trace_context.retrieval_duration_ms = int((time.perf_counter() - t_ret) * 1000)
+
+            t_plan = time.perf_counter()
+            plan_result = await generate_plan_with_repairs(intent, candidates, profile, trace_context=trace_context)
+            trace_context.planner_duration_ms = int((time.perf_counter() - t_plan) * 1000)
     else:
-        candidates, semantic_used, sql_used, queries = await retrieve_learning_path_candidates(db, intent, profile, limit=limit)
-        plan_result = await generate_plan_with_repairs(intent, candidates, profile)
-    selected = await _reload_selected_courses(db, plan_result)
+        t_ret = time.perf_counter()
+        candidates, semantic_used, sql_used, queries = await retrieve_learning_path_candidates(db, intent, profile, limit=limit, trace_context=trace_context)
+        trace_context.retrieval_duration_ms = int((time.perf_counter() - t_ret) * 1000)
+
+        t_plan = time.perf_counter()
+        plan_result = await generate_plan_with_repairs(intent, candidates, profile, trace_context=trace_context)
+        trace_context.planner_duration_ms = int((time.perf_counter() - t_plan) * 1000)
+
+    selected = await _reload_selected_courses(db, plan_result, trace_context=trace_context)
     courses = [course for _, course in selected]
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     total_minutes = sum(course.total_curriculum_minutes for course in courses)
@@ -158,6 +247,32 @@ async def create_learning_path(db: AsyncSession, user: User, path_input: Learnin
 
     is_valid = plan_is_valid and final_status in {LearningPathStatus.READY, LearningPathStatus.DRAFT}
 
+    final_source = "MESH" if (plan_result.llm_generation_used and plan_result.repair_count == 0) else ("MESH_REPAIRED" if plan_result.llm_generation_used else ("FALLBACK" if plan_result.deterministic_fallback_used else "NONE"))
+    log_learning_path_step(
+        logger,
+        "learning_path.step.success",
+        trace_id,
+        step="plan.finalize",
+        final_source=final_source,
+        selected_count=len(courses),
+        effective_target_count=effective_count,
+        final_validation_status=plan_result.validation_status,
+        llm_generation_used=plan_result.llm_generation_used,
+        deterministic_fallback_used=plan_result.deterministic_fallback_used,
+    )
+
+    sel_roles = {ROLE_PRIMARY: 0, ROLE_SECONDARY: 0, ROLE_CROSS_DOMAIN: 0, ROLE_SUPPORTING: 0}
+    for course in courses:
+        r, _ = classify_course_for_path(course, intent.primary_domain_code, intent.secondary_domain_codes)
+        if r in sel_roles:
+            sel_roles[r] += 1
+
+    trace_context.selected_primary_count = sel_roles[ROLE_PRIMARY]
+    trace_context.selected_secondary_count = sel_roles[ROLE_SECONDARY]
+    trace_context.selected_cross_domain_count = sel_roles[ROLE_CROSS_DOMAIN]
+    trace_context.selected_supporting_count = sel_roles[ROLE_SUPPORTING]
+    trace_context.total_duration_ms = trace_context.elapsed_ms()
+
     metadata = {
         "semantic_retrieval_used": semantic_used,
         "sql_fallback_used": sql_used,
@@ -177,19 +292,47 @@ async def create_learning_path(db: AsyncSession, user: User, path_input: Learnin
         "secondary_domain_count": len(intent.secondary_domain_codes),
         "goal_count": len(intent.goal_codes),
         "trace_id": trace_id,
+        "pipeline_first_failure_stage": trace_context.first_failure_stage,
+        "pipeline_first_failure_reason": trace_context.first_failure_reason,
+        "pipeline_final_failure_stage": trace_context.final_failure_stage,
+        "pipeline_final_failure_reason": trace_context.final_failure_reason,
+        "selected_primary_count": trace_context.selected_primary_count,
+        "selected_secondary_count": trace_context.selected_secondary_count,
+        "selected_cross_domain_count": trace_context.selected_cross_domain_count,
+        "selected_supporting_count": trace_context.selected_supporting_count,
+        "schema_validation_errors": list(plan_result.schema_validation_errors),
+        "validation_violations": list(plan_result.violations),
+        "mesh_attempt_count": trace_context.mesh_attempt_count,
+        "mesh_attempt_durations_ms": list(trace_context.mesh_attempt_durations_ms),
+        "retrieval_duration_ms": trace_context.retrieval_duration_ms,
+        "planner_duration_ms": trace_context.planner_duration_ms,
+        "total_generation_duration_ms": trace_context.total_duration_ms,
         "path_mode": intent.path_length,
         "auto_min": MIN_PATH_COURSES if intent.path_length == "AUTO" else None,
         "auto_max": MAX_PATH_COURSES if intent.path_length == "AUTO" else None,
         "requested_count": requested_count,
-        "available_safe_count": available_safe_count,
+        "selected_domain_count": len(intent.secondary_domain_codes) + 1,
+        "selected_domains": [intent.primary_domain_code, *intent.secondary_domain_codes],
+        "eligible_course_count": available_safe_count,
         "effective_target_count": effective_count,
         "selected_count": len(courses) if is_valid else 0,
         "coverage_limited": coverage_limited,
+        "covered_domains": list(coverage.covered_domains) if coverage else [],
+        "uncovered_domains": list(coverage.uncovered_domains) if coverage else [],
+        "domain_coverage_limited": coverage.domain_coverage_limited if coverage else False,
         "coverage_reason": coverage_reason,
         "coverage_status": "INSUFFICIENT" if available_safe_count < MIN_PATH_COURSES else ("LIMITED" if coverage_limited else "SUFFICIENT"),
         "explanation_source": "MESH" if plan_result.llm_generation_used else "FALLBACK",
         "failure_reason": None if is_valid else (plan_result.validation_status if plan_result.validation_status != "INSUFFICIENT_COVERAGE" else "INSUFFICIENT_CATALOG_COVERAGE"),
     }
+
+    t_lp = time.perf_counter()
+    log_learning_path_step(
+        logger,
+        "learning_path.step.start",
+        trace_id,
+        step="persistence.learning_path",
+    )
     path = LearningPath(
         user_id=user.id,
         title=plan_result.plan.title,
@@ -199,7 +342,6 @@ async def create_learning_path(db: AsyncSession, user: User, path_input: Learnin
         secondary_domains_json=path_input.secondary_domains,
         goal_code=path_input.goal,
         level_code=path_input.level,
-        learning_preferences_json=path_input.learning_preferences,
         weekly_hours=path_input.weekly_hours,
         target_weeks=path_input.target_weeks,
         budget_type=path_input.budget_type,
@@ -207,7 +349,6 @@ async def create_learning_path(db: AsyncSession, user: User, path_input: Learnin
         budget_amount=path_input.effective_budget(),
         currency=path_input.currency,
         path_length_preference=path_input.path_length,
-        optional_instruction=path_input.optional_instruction or None,
         input_json=path_input.model_dump(mode="json"),
         prompt_version=settings.learning_path_prompt_version,
         profile_hash=profile_row.profile_hash,
@@ -221,6 +362,20 @@ async def create_learning_path(db: AsyncSession, user: User, path_input: Learnin
     )
     db.add(path)
     await db.flush()
+    lp_dur = (time.perf_counter() - t_lp) * 1000
+    log_learning_path_step(
+        logger,
+        "learning_path.step.success",
+        trace_id,
+        step="persistence.learning_path",
+        duration_ms=lp_dur,
+        path_id=path.id,
+        status=final_status,
+    )
+
+    t_item = time.perf_counter()
+    created_items = 0
+    expected_items = len(courses) if is_valid else 0
     if is_valid:
         for index, (stage, course) in enumerate(selected, 1):
             following = courses[index] if index < len(courses) else None
@@ -237,8 +392,32 @@ async def create_learning_path(db: AsyncSession, user: User, path_input: Learnin
                 price_snapshot=course.price,
                 currency=course.currency,
             ))
+            created_items += 1
 
-    db.add(LearningPathGenerationRun(
+    item_dur = (time.perf_counter() - t_item) * 1000
+    log_learning_path_step(
+        logger,
+        "learning_path.step.success",
+        trace_id,
+        step="persistence.items",
+        duration_ms=item_dur,
+        expected_count=expected_items,
+        created_count=created_items,
+    )
+    if created_items != expected_items:
+        log_learning_path_step(
+            logger,
+            "learning_path.step.error",
+            trace_id,
+            step="persistence.items",
+            error="ITEM_COUNT_MISMATCH",
+            expected_count=expected_items,
+            created_count=created_items,
+        )
+        trace_context.record_failure("persistence.items", "ITEM_COUNT_MISMATCH")
+
+    t_run = time.perf_counter()
+    run = LearningPathGenerationRun(
         learning_path_id=path.id,
         status="SUCCEEDED" if is_valid else "FAILED",
         candidate_count=len(candidates),
@@ -247,8 +426,24 @@ async def create_learning_path(db: AsyncSession, user: User, path_input: Learnin
         metadata_json=metadata,
         started_at=now,
         completed_at=now,
-    ))
+    )
+    db.add(run)
     await db.flush()
+    run_dur = (time.perf_counter() - t_run) * 1000
+    log_learning_path_step(
+        logger,
+        "learning_path.step.success",
+        trace_id,
+        step="persistence.generation_run",
+        duration_ms=run_dur,
+        generation_run_id=run.id,
+        metadata_key_count=len(metadata),
+        validation_status=plan_result.validation_status,
+        llm_generation_used=plan_result.llm_generation_used,
+        deterministic_fallback_used=plan_result.deterministic_fallback_used,
+        selected_count=len(courses),
+    )
+
     return path
 
 

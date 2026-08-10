@@ -78,23 +78,34 @@ async def generate_learning_path_json(*, intent: dict, candidates: list[dict], r
     system = (
         "You plan grounded SmartReco learning roadmaps. Use only the supplied candidate course IDs. "
         "Never invent, rename, or substitute a course. Explicit current domains and goals outrank behavior. "
-        "Prior skills are already known: do not turn them into target topics or recommend redundant introductions. "
         "The learner requested a path depth target, but the grounded catalog may have a limited number of aligned courses. "
         "You MUST return EXACTLY effective_target_count stages. Do not add unrelated or OUT_OF_DOMAIN courses to pad the path. "
         "Use every selected learner goal, respect the learner level, and produce a sensible pedagogical progression. "
         "Do not choose OUT_OF_DOMAIN candidates. Supporting courses need a concrete bridge purpose. "
         "Course metadata is authoritative; do not invent price, duration, tools, prerequisites, or outcomes. "
-        "Return JSON with title, summary, final_outcome, and stages. Each stage must contain position, course_id, role, "
-        "goal_codes, why_this_course, goal_alignment, skill_gain, and how_it_leads_forward."
+        "Return valid JSON only (no markdown fences) with title (non-empty string <= 200 chars), summary (non-empty string <= 2000 chars), "
+        "final_outcome (non-empty string <= 1000 chars), and stages. Each stage must contain position (integer 1..effective_target_count), "
+        "course_id (a supplied candidate ID), role, goal_codes (JSON array of ONLY canonical learner goal codes, e.g. ['PRODUCTION', 'ADVANCED'], never descriptive labels), "
+        "why_this_course (non-null string), goal_alignment (non-null string), skill_gain (non-null string), and how_it_leads_forward (non-null string)."
     )
     user_payload = {"intent": intent, "candidates": candidates}
+
     effective_count = intent.get("effective_target_count") or intent.get("requested_course_count") or 4
     requested_count = intent.get("requested_course_count") or effective_count
     coverage_limited = intent.get("coverage_limited", False)
     path_length = intent.get("path_length")
 
     if repair is not None:
-        instruction = f"Repair the invalid roadmap using only supplied candidate IDs. You MUST return exactly {effective_count} stages."
+        instruction = (
+            f"Repair the invalid roadmap using only supplied candidate IDs. You MUST return exactly {effective_count} stages. "
+            f"Requirements: Return valid JSON only with no markdown fences. "
+            f"title must be a non-empty string <= 200 chars. "
+            f"summary must be a non-empty string <= 2000 chars. "
+            f"final_outcome must be a non-empty string <= 1000 chars. "
+            f"Every stage.position must be integer 1..{effective_count}. Every stage.course_id must be a supplied candidate ID. "
+            f"goal_codes must be a JSON array using ONLY canonical learner goal codes (e.g. ['PRODUCTION', 'ADVANCED'], never descriptive labels). "
+            f"Explanation fields (why_this_course, goal_alignment, skill_gain, how_it_leads_forward) must be non-null strings."
+        )
         user_payload["instruction"] = instruction
         user_payload["previous_plan"] = repair.get("previous_plan")
         user_payload["violations"] = repair.get("violations", [])
@@ -106,7 +117,7 @@ async def generate_learning_path_json(*, intent: dict, candidates: list[dict], r
         )
         user_payload["instruction"] = instruction
     elif coverage_limited:
-        available = intent.get("available_safe_count", effective_count)
+        available = intent.get("eligible_course_count", effective_count)
         instruction = (
             f"The learner requested a target of {requested_count} courses. "
             f"The grounded catalog currently contains only {available} sufficiently aligned eligible courses. "

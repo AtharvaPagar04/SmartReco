@@ -6,10 +6,6 @@ FRIENDLY = {
     "secondary_domains": "Choose up to two secondary domains.",
     "selected_domains": "Choose up to three domains.",
     "goals": "Choose up to two learning goals.",
-    "learning_preferences": "Choose up to three learning preferences.",
-    "prior_skills": "Choose up to six prior skills.",
-    "format_preferences": "Choose up to three format preferences.",
-    "quick_instructions": "Choose up to three quick instructions.",
     "weekly_hours": "Weekly time must be between 1 and 40 hours.",
     "requested_course_count": "Choose a path with three or four courses.",
 }
@@ -25,11 +21,10 @@ def friendly_validation_errors(error: ValidationError) -> dict[str, str]:
         elif field == "form" and "budget" in raw_message.lower():
             field = "budget_amount"
         message = FRIENDLY.get(field, "Review this answer and try again.")
-        if detail.get("type") == "missing" and field in {"primary_domain", "goals", "learning_preferences", "level"}:
+        if detail.get("type") == "missing" and field in {"primary_domain", "goals", "level"}:
             message = {
                 "primary_domain": FRIENDLY["primary_domain"],
                 "goals": "Choose at least one learning goal.",
-                "learning_preferences": "Choose at least one learning preference.",
                 "level": "Choose your current level.",
             }[field]
         if "unique" in str(detail.get("msg", "")).lower():
