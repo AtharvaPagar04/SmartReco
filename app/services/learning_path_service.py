@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 
@@ -19,7 +20,13 @@ from app.services.learning_path_planner import (
     pre_rank_candidates,
     select_fallback_courses,
 )
-from app.services.learning_path_policy import MAX_PATH_COURSES, MIN_PATH_COURSES, ROLE_OUT_OF_DOMAIN
+from app.services.learning_path_policy import (
+    MAX_PATH_COURSES,
+    MIN_PATH_COURSES,
+    RELATED_DOMAIN_THRESHOLD,
+    ROLE_OUT_OF_DOMAIN,
+    get_related_domain_score,
+)
 from app.services.langsmith_service import trace_metadata, tracing_enabled
 from app.services.recommendation_retrieval_service import (
     RecommendationCandidate,
@@ -38,6 +45,42 @@ STAGES = (
     "Keep progressing",
 )
 DIFFICULTY = {"BEGINNER": 0, "INTERMEDIATE": 1, "ADVANCED": 2}
+
+
+@dataclass
+class ReplacementResult:
+    replaced: bool
+    reason_code: str
+    user_message: str
+    source: str  # "EXACT_DOMAIN", "RELATED_DOMAIN", or "NONE"
+    replacement_course_id: str | None = None
+    replacement_course_title: str | None = None
+    previous_course_title: str | None = None
+
+
+def build_replacement_message(
+    reason_code: str,
+    source: str,
+    domain_label: str,
+    previous_title: str | None = None,
+    replacement_title: str | None = None,
+) -> str:
+    if source == "EXACT_DOMAIN" and replacement_title and previous_title:
+        return f"'{previous_title}' was replaced with '{replacement_title}'."
+    if source == "RELATED_DOMAIN" and replacement_title:
+        return f"No unused exact {domain_label} match was available, so SmartReco selected a closely related alternative: '{replacement_title}'."
+
+    messages = {
+        "ALL_MATCHES_ALREADY_IN_PATH": f"All strong {domain_label} matches are already in this roadmap, so there is no unused exact replacement.",
+        "NO_EASIER_CANDIDATE": "No easier grounded replacement is available for this stage.",
+        "NO_CHEAPER_CANDIDATE": "No cheaper grounded replacement is available for this stage.",
+        "NO_RELATED_CANDIDATE": "No suitable related course is available without adding an unrelated course.",
+        "NO_GROUNDED_REPLACEMENT": "No grounded replacement is available right now.",
+        "VALIDATION_FAILED": "SmartReco found an alternative, but replacing this stage would make the roadmap invalid.",
+        "PERSISTENCE_FAILED": "We found a replacement but could not save it. Please try again.",
+    }
+    return messages.get(reason_code, "No grounded replacement is available right now.")
+
 
 
 def _hours(course: Course) -> int:
@@ -74,12 +117,23 @@ def _fallback_reason(course: Course, domain_label: str) -> str:
     return f"{course.title} is a grounded fallback stage for {domain_label}, focusing on {skills}."
 
 
-async def candidate_courses(db: AsyncSession, user: User, path_input: LearningPathInput) -> tuple[list[RecommendationCandidate], str | None, dict]:
+import uuid
+
+
+async def candidate_courses(
+    db: AsyncSession,
+    user: User,
+    path_input: LearningPathInput,
+    excluded: set[str] | None = None,
+    trace_context: LearningPathTraceContext | None = None,
+) -> tuple[list[RecommendationCandidate], str | None, dict]:
     profile_row = await build_or_refresh_profile(db, user.id)
     profile = _profile_for_input(path_input, profile_row.profile_json or {})
     intent = LearningPathIntent.from_input(path_input)
     limit = max(settings.learning_path_max_candidates, intent.requested_course_count * 3)
-    candidates, semantic_used, sql_used, queries = await retrieve_learning_path_candidates(db, intent, profile, limit=limit)
+    candidates, semantic_used, sql_used, queries = await retrieve_learning_path_candidates(
+        db, intent, profile, limit=limit, excluded=excluded, trace_context=trace_context
+    )
     return candidates, profile_row.profile_hash, {
         "semantic_retrieval_used": semantic_used,
         "sql_fallback_used": sql_used,
@@ -459,34 +513,339 @@ async def get_owned_path(db: AsyncSession, user_id: str, path_id: str) -> Learni
 
 
 
-async def replace_item(db: AsyncSession, path: LearningPath, item: LearningPathItem, reason: str) -> bool:
+async def replace_item(
+    db: AsyncSession,
+    path: LearningPath,
+    item: LearningPathItem,
+    reason: str,
+    trace_id: str | None = None,
+) -> ReplacementResult:
+    t0 = time.perf_counter()
+    active_trace_id = trace_id or str(uuid.uuid4())
+    trace_ctx = LearningPathTraceContext(trace_id=active_trace_id)
+    current_course_id = item.course_id
+    current_course_title = item.course.title if item.course else None
+
+    domain_option = DOMAIN_BY_CODE.get(path.primary_domain.upper()) if path.primary_domain else None
+    domain_label = domain_option.label if domain_option else (path.primary_domain or "domain")
+
+    log_learning_path_step(
+        logger,
+        "learning_path.replace.request.start",
+        active_trace_id,
+        path_id=path.id,
+        item_id=item.id,
+        current_course_id=current_course_id,
+        current_course_title=current_course_title,
+        requested_difficulty=reason,
+        position=item.position,
+    )
+
+    log_learning_path_step(
+        logger,
+        "learning_path.replace.step.start",
+        active_trace_id,
+        step="lookup",
+        path_found=True,
+        item_found=True,
+        item_position=item.position,
+        current_course_id=current_course_id,
+    )
+
     path_input = LearningPathInput.model_validate(path.input_json)
     user = await db.scalar(select(User).where(User.id == path.user_id))
     if not user:
-        return False
-    candidates, _, _ = await candidate_courses(db, user, path_input)
+        log_learning_path_step(
+            logger,
+            "learning_path.replace.step.error",
+            active_trace_id,
+            step="lookup",
+            error_reason="USER_NOT_FOUND",
+        )
+        msg = build_replacement_message("VALIDATION_FAILED", "NONE", domain_label, current_course_title)
+        return ReplacementResult(False, "VALIDATION_FAILED", msg, "NONE", previous_course_title=current_course_title)
+
+    excluded_existing = {path_item.course_id for path_item in path.items}
+    selected_domains = [path.primary_domain, *(path.secondary_domains_json or [])]
+
+    log_learning_path_step(
+        logger,
+        "learning_path.replace.step.start",
+        active_trace_id,
+        step="constraints",
+        selected_domains=selected_domains,
+        goal_codes=[path.goal_code],
+        current_level=path.level_code,
+        requested_difficulty=reason,
+        current_stage_position=item.position,
+        existing_course_ids=list(excluded_existing),
+        excluded_current_course_id=current_course_id,
+    )
+
+    candidates, _, _ = await candidate_courses(db, user, path_input, excluded=excluded_existing, trace_context=trace_ctx)
+    candidate_count_before_exclusions = len(candidates)
+    non_excluded_candidates = [c for c in candidates if c.course.id not in excluded_existing]
+    excluded_existing_count = candidate_count_before_exclusions - len(non_excluded_candidates)
+
     intent = LearningPathIntent.from_input(path_input)
-    excluded = {path_item.course_id for path_item in path.items}
-    ranked = [candidate for candidate in pre_rank_candidates(candidates, intent, {}) if candidate.course.id not in excluded and candidate.path_role != ROLE_OUT_OF_DOMAIN]
+    preranked = pre_rank_candidates(non_excluded_candidates, intent, {})
+
+    # Tier 1: Exact Domain Evaluation
+    log_learning_path_step(
+        logger,
+        "learning_path.replace.step.start",
+        active_trace_id,
+        step="candidate_exact",
+        selected_domains=selected_domains,
+    )
+
+    exact_candidates = [c for c in preranked if c.path_role != ROLE_OUT_OF_DOMAIN]
+    current_diff = DIFFICULTY.get(item.course.difficulty if item.course else "", 1)
+    current_price = item.price_snapshot if item.price_snapshot is not None else (item.course.price if item.course else Decimal("0.00"))
+
     if reason == "TOO_ADVANCED":
-        ranked.sort(key=lambda candidate: (DIFFICULTY.get(candidate.course.difficulty, 1), -candidate.path_score, candidate.course.title.casefold()))
+        filtered_exact = [c for c in exact_candidates if DIFFICULTY.get(c.course.difficulty, 1) < current_diff]
+        sort_key_exact = lambda c: (DIFFICULTY.get(c.course.difficulty, 1), -c.path_score, c.course.title.casefold())
+    elif reason == "TOO_BASIC":
+        filtered_exact = [c for c in exact_candidates if DIFFICULTY.get(c.course.difficulty, 1) >= current_diff]
+        sort_key_exact = lambda c: (-DIFFICULTY.get(c.course.difficulty, 1), -c.path_score, c.course.title.casefold())
     elif reason == "TOO_EXPENSIVE":
-        ranked.sort(key=lambda candidate: (candidate.course.price, -candidate.path_score, candidate.course.title.casefold()))
+        filtered_exact = [c for c in exact_candidates if c.course.price < current_price]
+        sort_key_exact = lambda c: (c.course.price, -c.path_score, c.course.title.casefold())
     else:
-        ranked.sort(key=lambda candidate: (-candidate.path_score, DIFFICULTY.get(candidate.course.difficulty, 1), candidate.course.title.casefold()))
-    if not ranked:
-        return False
-    course = ranked[0].course
+        filtered_exact = exact_candidates
+        sort_key_exact = lambda c: (-c.path_score, DIFFICULTY.get(c.course.difficulty, 1), c.course.title.casefold())
+
+    ranked_exact = sorted(filtered_exact, key=sort_key_exact)
+
+    chosen_candidate: RecommendationCandidate | None = None
+    source = "NONE"
+    related_candidate_count_after_domain_filter = 0
+    filtered_exact_count = len(filtered_exact)
+
+    if ranked_exact:
+        chosen_candidate = ranked_exact[0]
+        source = "EXACT_DOMAIN"
+        log_learning_path_step(
+            logger,
+            "learning_path.replace.step.success",
+            active_trace_id,
+            step="candidate_exact",
+            candidate_count=len(ranked_exact),
+            chosen_course_id=chosen_candidate.course.id,
+            chosen_course_title=chosen_candidate.course.title,
+        )
+    else:
+        log_learning_path_step(
+            logger,
+            "learning_path.replace.step.warning",
+            active_trace_id,
+            step="candidate_exact",
+            reason="NO_EXACT_MATCH",
+            exact_candidate_count=len(exact_candidates),
+            filtered_exact_count=0,
+        )
+
+        # Tier 2: Related Domain Fallback Evaluation
+        log_learning_path_step(
+            logger,
+            "learning_path.replace.step.start",
+            active_trace_id,
+            step="candidate_related",
+            selected_domains=selected_domains,
+        )
+
+        related_eval: list[tuple[RecommendationCandidate, float, str]] = []
+        for c in non_excluded_candidates:
+            rel_score, rel_dom = get_related_domain_score(c.course, selected_domains)
+            if rel_score >= RELATED_DOMAIN_THRESHOLD and rel_dom:
+                related_eval.append((c, rel_score, rel_dom))
+
+        related_candidate_count_before_filter = len(non_excluded_candidates)
+        related_candidate_count_after_domain_filter = len(related_eval)
+
+        if reason == "TOO_ADVANCED":
+            filtered_related = [t for t in related_eval if DIFFICULTY.get(t[0].course.difficulty, 1) < current_diff]
+            sort_key_rel = lambda t: (DIFFICULTY.get(t[0].course.difficulty, 1), -t[1], t[0].course.title.casefold())
+        elif reason == "TOO_BASIC":
+            filtered_related = [t for t in related_eval if DIFFICULTY.get(t[0].course.difficulty, 1) >= current_diff]
+            sort_key_rel = lambda t: (-DIFFICULTY.get(t[0].course.difficulty, 1), -t[1], t[0].course.title.casefold())
+        elif reason == "TOO_EXPENSIVE":
+            filtered_related = [t for t in related_eval if t[0].course.price < current_price]
+            sort_key_rel = lambda t: (t[0].course.price, -t[1], t[0].course.title.casefold())
+        else:
+            filtered_related = related_eval
+            sort_key_rel = lambda t: (-t[1], DIFFICULTY.get(t[0].course.difficulty, 1), t[0].course.title.casefold())
+
+        related_candidate_count_after_reason_filter = len(filtered_related)
+        ranked_related = sorted(filtered_related, key=sort_key_rel)
+        final_related_candidate_count = len(ranked_related)
+
+        if ranked_related:
+            chosen_tuple = ranked_related[0]
+            chosen_candidate = chosen_tuple[0]
+            source = "RELATED_DOMAIN"
+            log_learning_path_step(
+                logger,
+                "learning_path.replace.step.success",
+                active_trace_id,
+                step="candidate_related",
+                related_candidate_count_before_filter=related_candidate_count_before_filter,
+                related_candidate_count_after_domain_filter=related_candidate_count_after_domain_filter,
+                related_candidate_count_after_reason_filter=related_candidate_count_after_reason_filter,
+                final_related_candidate_count=final_related_candidate_count,
+                replacement_source="RELATED_DOMAIN",
+                chosen_course_id=chosen_candidate.course.id,
+                chosen_course_title=chosen_candidate.course.title,
+                related_domain=chosen_tuple[2],
+                related_affinity_score=chosen_tuple[1],
+            )
+
+    if not chosen_candidate:
+        all_catalog_exact_matches_in_path = False
+        if exact_candidates and len(exact_candidates) == len([c for c in preranked if c.path_role != ROLE_OUT_OF_DOMAIN and c.course.id in excluded_existing]):
+            all_catalog_exact_matches_in_path = True
+
+        if reason == "TOO_ADVANCED":
+            reason_code = "NO_EASIER_CANDIDATE"
+        elif reason == "TOO_EXPENSIVE":
+            reason_code = "NO_CHEAPER_CANDIDATE"
+        elif all_catalog_exact_matches_in_path:
+            reason_code = "ALL_MATCHES_ALREADY_IN_PATH"
+        elif related_candidate_count_after_domain_filter > 0:
+            reason_code = "NO_RELATED_CANDIDATE"
+        else:
+            reason_code = "NO_GROUNDED_REPLACEMENT"
+
+        log_learning_path_step(
+            logger,
+            "learning_path.replace.step.warning",
+            active_trace_id,
+            step="candidate_selection",
+            reason=reason_code,
+            current_course_id=current_course_id,
+            current_course_title=current_course_title,
+            selected_domains=selected_domains,
+            requested_difficulty=reason,
+            existing_roadmap_count=len(path.items),
+            exact_candidate_count=len(exact_candidates),
+            related_candidate_count=related_candidate_count_after_domain_filter,
+            excluded_existing_count=excluded_existing_count,
+            difficulty_filtered_count=filtered_exact_count,
+            final_candidate_count=0,
+            failure_reason_code=reason_code,
+        )
+        log_learning_path_step(
+            logger,
+            "learning_path.replace.request.failed",
+            active_trace_id,
+            path_id=path.id,
+            item_id=item.id,
+            reason=reason_code,
+        )
+        msg = build_replacement_message(reason_code, "NONE", domain_label, current_course_title)
+        return ReplacementResult(False, reason_code, msg, "NONE", previous_course_title=current_course_title)
+
+    course = chosen_candidate.course
+    other_course_ids = {pi.course_id for pi in path.items if pi.id != item.id}
+    if not course.is_active or course.id in other_course_ids:
+        log_learning_path_step(
+            logger,
+            "learning_path.replace.step.error",
+            active_trace_id,
+            step="validation",
+            reason="REPLACEMENT_VALIDATION_FAILED",
+            replacement_course_id=course.id,
+            is_active=course.is_active,
+            is_duplicate=(course.id in other_course_ids),
+        )
+        log_learning_path_step(
+            logger,
+            "learning_path.replace.request.failed",
+            active_trace_id,
+            path_id=path.id,
+            item_id=item.id,
+            reason="VALIDATION_FAILED",
+        )
+        msg = build_replacement_message("VALIDATION_FAILED", "NONE", domain_label, current_course_title)
+        return ReplacementResult(False, "VALIDATION_FAILED", msg, "NONE", previous_course_title=current_course_title)
+
+    log_learning_path_step(
+        logger,
+        "learning_path.replace.step.success",
+        active_trace_id,
+        step="validation",
+        replacement_course_id=course.id,
+        replacement_course_title=course.title,
+    )
+
     item.course_id = course.id
     item.course = course
     item.reason = _fallback_reason(course, intent.primary_domain_label)
-    item.how_it_prepares_next = "This replacement preserves the grounded domain policy for the surrounding roadmap."
     item.skills_gained_json = list((course.what_you_will_learn or course.tags or [])[:5])
     item.estimated_hours = _hours(course)
     item.price_snapshot = course.price
     item.currency = course.currency
+
+    sorted_items = sorted(path.items, key=lambda x: x.position)
+    idx = next((i for i, x in enumerate(sorted_items) if x.id == item.id), -1)
+    if idx != -1:
+        if idx + 1 < len(sorted_items):
+            following = sorted_items[idx + 1].course
+            item.how_it_prepares_next = f"This stage prepares you for {following.title}."
+        else:
+            item.how_it_prepares_next = f"This stage advances the {intent.primary_domain_label} outcome."
+
+        if idx > 0:
+            previous_item = sorted_items[idx - 1]
+            previous_item.how_it_prepares_next = f"This stage prepares you for {course.title}."
+
     path.total_price = sum((Decimal(str(path_item.price_snapshot)) for path_item in path.items), Decimal("0.00"))
     path.estimated_total_hours = sum(_hours(path_item.course) for path_item in path.items if path_item.course)
     path.estimated_weeks = math.ceil(path.estimated_total_hours / path.weekly_hours)
+
+    log_learning_path_step(
+        logger,
+        "learning_path.replace.step.start",
+        active_trace_id,
+        step="persistence.update_item",
+        path_id=path.id,
+        item_id=item.id,
+        replacement_course_id=course.id,
+    )
     await db.flush()
-    return True
+    dur_ms = (time.perf_counter() - t0) * 1000
+
+    log_learning_path_step(
+        logger,
+        "learning_path.replace.step.success",
+        active_trace_id,
+        step="persistence.update_item",
+        duration_ms=dur_ms,
+        path_id=path.id,
+        item_id=item.id,
+        replacement_course_id=course.id,
+        replacement_course_title=course.title,
+    )
+    log_learning_path_step(
+        logger,
+        "learning_path.replace.request.success",
+        active_trace_id,
+        duration_ms=dur_ms,
+        path_id=path.id,
+        item_id=item.id,
+        replacement_course_id=course.id,
+        replacement_source=source,
+    )
+
+    reason_code = "REPLACED_EXACT" if source == "EXACT_DOMAIN" else "REPLACED_RELATED"
+    msg = build_replacement_message(reason_code, source, domain_label, current_course_title, course.title)
+    return ReplacementResult(
+        replaced=True,
+        reason_code=reason_code,
+        user_message=msg,
+        source=source,
+        replacement_course_id=course.id,
+        replacement_course_title=course.title,
+        previous_course_title=current_course_title,
+    )

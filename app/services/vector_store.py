@@ -1,9 +1,25 @@
 import asyncio
+import math
 from dataclasses import dataclass
 
 from qdrant_client import QdrantClient, models
 
 from app.config import settings
+
+
+def is_valid_vector(vector: list[float] | None, expected_size: int | None = None) -> bool:
+    if expected_size is None:
+        expected_size = settings.vector_size
+    if not isinstance(vector, list) or len(vector) != expected_size:
+        return False
+    if not all(isinstance(x, (int, float)) and math.isfinite(x) for x in vector):
+        return False
+    if all(abs(x) < 1e-9 for x in vector):
+        return False
+    first = vector[0]
+    if all(abs(x - first) < 1e-6 for x in vector):
+        return False
+    return True
 
 
 @dataclass
@@ -34,8 +50,8 @@ class VectorStore:
         await asyncio.to_thread(_do)
 
     async def upsert(self, vector: list[float], payload: dict) -> None:
-        if len(vector) != settings.vector_size:
-            raise ValueError(f"Embedding dimension {len(vector)} does not match VECTOR_SIZE {settings.vector_size}")
+        if not is_valid_vector(vector):
+            raise ValueError(f"Refusing to upsert invalid or placeholder vector (len={len(vector) if isinstance(vector, list) else 0})")
 
         def _do():
             client = self._get_client()
@@ -55,12 +71,12 @@ class VectorStore:
             return points[0] if points else None
         return await asyncio.to_thread(_do)
 
-    async def scroll_points(self, *, limit: int = 100):
+    async def scroll_points(self, *, limit: int = 100, with_vectors: bool = False):
         def _do():
             client = self._get_client()
             points, offset = [], None
             while True:
-                batch, offset = client.scroll(collection_name=settings.qdrant_collection, limit=limit, offset=offset, with_payload=True, with_vectors=False)
+                batch, offset = client.scroll(collection_name=settings.qdrant_collection, limit=limit, offset=offset, with_payload=True, with_vectors=with_vectors)
                 points.extend(batch)
                 if offset is None:
                     return points

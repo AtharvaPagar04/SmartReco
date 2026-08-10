@@ -34,10 +34,12 @@ class Settings(BaseSettings):
     related_courses_limit: int = 2
     related_courses_candidate_limit: int = 10
     related_courses_cache_ttl_seconds: int = 1800
-    related_courses_semantic_weight: float = 0.60
-    related_courses_category_weight: float = 0.20
-    related_courses_tag_weight: float = 0.15
+    related_courses_semantic_weight: float = 0.45
+    related_courses_category_weight: float = 0.15
+    related_courses_tag_weight: float = 0.10
+    related_courses_activity_weight: float = 0.25
     related_courses_difficulty_weight: float = 0.05
+    related_courses_min_semantic_score: float = 0.45
     related_courses_timeout_seconds: int = 3
     qdrant_mode: str = "local"
     qdrant_path: str = "./data/qdrant"

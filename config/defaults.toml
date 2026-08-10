@@ -23,10 +23,12 @@ enabled = true
 limit = 2
 candidate_limit = 10
 cache_ttl_seconds = 1800
-semantic_weight = 0.60
-category_weight = 0.20
-tag_weight = 0.15
+semantic_weight = 0.45
+category_weight = 0.15
+tag_weight = 0.10
+activity_weight = 0.25
 difficulty_weight = 0.05
+min_semantic_score = 0.45
 timeout_seconds = 3
 
 [qdrant]

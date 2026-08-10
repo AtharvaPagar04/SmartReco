@@ -19,11 +19,50 @@ ROLE_CROSS_DOMAIN = "CROSS_DOMAIN"
 ROLE_SUPPORTING = "SUPPORTING"
 ROLE_OUT_OF_DOMAIN = "OUT_OF_DOMAIN"
 
+DOMAIN_ADJACENCIES: dict[str, tuple[str, ...]] = {
+    "RAG": ("GENERATIVE_AI", "AGENTIC_AI", "ARTIFICIAL_INTELLIGENCE", "PYTHON"),
+    "GENERATIVE_AI": ("RAG", "AGENTIC_AI", "ARTIFICIAL_INTELLIGENCE", "PYTHON"),
+    "AGENTIC_AI": ("GENERATIVE_AI", "RAG", "ARTIFICIAL_INTELLIGENCE", "PYTHON"),
+    "FRONTEND": ("UI_UX", "FULLSTACK", "WEB_DEVELOPMENT"),
+    "UI_UX": ("FRONTEND", "FULLSTACK"),
+    "FULLSTACK": ("FRONTEND", "BACKEND", "API"),
+    "BACKEND": ("FULLSTACK", "API", "DEVOPS", "CLOUD"),
+    "API": ("BACKEND", "FULLSTACK"),
+    "DEVOPS": ("CLOUD", "BACKEND", "SYSADMIN"),
+    "CLOUD": ("DEVOPS", "BACKEND"),
+    "DATA_ENGINEERING": ("BACKEND", "DATA_SCIENCE", "PYTHON"),
+    "DATA_SCIENCE": ("DATA_ENGINEERING", "ARTIFICIAL_INTELLIGENCE", "PYTHON"),
+    "ARTIFICIAL_INTELLIGENCE": ("GENERATIVE_AI", "AGENTIC_AI", "RAG", "DATA_SCIENCE"),
+}
+
+RELATED_DOMAIN_THRESHOLD = 0.15
+
 
 from dataclasses import dataclass
 import re
 
 from app.models import Course
+
+
+def get_related_domain_score(course: Course, selected_domains: list[str]) -> tuple[float, str | None]:
+    """Calculate best affinity score for domains related to selected domains."""
+    best_score = 0.0
+    best_domain = None
+    evaluated = set()
+
+    for sel in selected_domains:
+        dom_code = sel.upper()
+        adjacencies = DOMAIN_ADJACENCIES.get(dom_code, (dom_code,))
+        for adj in adjacencies:
+            if adj in evaluated:
+                continue
+            evaluated.add(adj)
+            affinity = classify_course_domain_affinity(course, adj)
+            if affinity.score > best_score:
+                best_score = affinity.score
+                best_domain = adj
+    return best_score, best_domain
+
 
 
 @dataclass(frozen=True)
@@ -166,6 +205,7 @@ def _matches(text: str, phrases: tuple[str, ...]) -> tuple[str, ...]:
 
 
 def classify_course_domain_affinity(course: Course, requested_domain: str) -> DomainAffinity:
+    from app.schemas.learning_path import DOMAIN_BY_CODE
     text = _course_text(course)
     domain = requested_domain.casefold()
     if domain == "frontend":
@@ -196,11 +236,21 @@ def classify_course_domain_affinity(course: Course, requested_domain: str) -> Do
         score = min(1.0, 0.12 + 0.20 * len(matches))
         evidence = matches
     else:
-        normalized = re.sub(r"[^a-z0-9]+", " ", domain).strip()
-        matches = _matches(text, tuple(part for part in normalized.split() if len(part) > 2))
-        category = re.sub(r"[^a-z0-9]+", " ", course.category.casefold()).strip()
-        score = min(1.0, (0.50 if category == normalized else 0.0) + 0.20 * len(matches))
-        evidence = matches
+        dom_code = requested_domain.upper()
+        dom_option = DOMAIN_BY_CODE.get(dom_code)
+        if dom_option and dom_option.search_keywords:
+            search_terms = tuple(k.casefold() for k in dom_option.search_keywords)
+            matches = _matches(text, search_terms)
+            category_norm = re.sub(r"[^a-z0-9]+", " ", course.category.casefold()).strip()
+            label_norm = re.sub(r"[^a-z0-9]+", " ", dom_option.label.casefold()).strip()
+            score = min(1.0, (0.50 if category_norm == label_norm else 0.0) + 0.20 * len(matches))
+            evidence = matches
+        else:
+            normalized = re.sub(r"[^a-z0-9]+", " ", domain).strip()
+            matches = _matches(text, tuple(part for part in normalized.split() if len(part) > 2))
+            category = re.sub(r"[^a-z0-9]+", " ", course.category.casefold()).strip()
+            score = min(1.0, (0.50 if category == normalized else 0.0) + 0.20 * len(matches))
+            evidence = matches
     return DomainAffinity(requested_domain, round(max(0.0, min(1.0, score)), 4), evidence)
 
 

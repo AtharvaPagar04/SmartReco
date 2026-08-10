@@ -123,7 +123,16 @@ from app.services.learning_path_logging import LearningPathTraceContext, log_lea
 logger = logging.getLogger(__name__)
 
 
-async def retrieve_learning_path_candidates(db: AsyncSession, intent, profile: dict, *, limit: int, store: VectorStore | None = None, trace_context: LearningPathTraceContext | None = None) -> tuple[list[RecommendationCandidate], bool, bool, list[str]]:
+async def retrieve_learning_path_candidates(
+    db: AsyncSession,
+    intent,
+    profile: dict,
+    *,
+    limit: int,
+    store: VectorStore | None = None,
+    trace_context: LearningPathTraceContext | None = None,
+    excluded: set[str] | None = None,
+) -> tuple[list[RecommendationCandidate], bool, bool, list[str]]:
     """Retrieve multi-intent grounded candidates without changing recommendation retrieval."""
     from app.services.learning_path_intent import LearningPathIntent
 
@@ -131,7 +140,7 @@ async def retrieve_learning_path_candidates(db: AsyncSession, intent, profile: d
         raise TypeError("intent must be LearningPathIntent")
 
     trace_id = trace_context.trace_id if trace_context else "no_trace"
-    excluded = _path_exclusions(profile)
+    excluded = _path_exclusions(profile) | set(excluded or ())
 
     t_q = time.perf_counter()
     queries = intent.retrieval_queries(profile)

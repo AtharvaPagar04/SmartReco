@@ -4,6 +4,12 @@
     <p class="muted">{{ related_course['difficulty']|title }} · {{ related_course['duration_minutes'] }} min</p>
     <h3><a href="/courses/{{ related_course['slug'] }}" data-related-course-click data-course-id="{{ related_course['id'] }}">{{ related_course['title'] }}</a></h3>
     <p>{{ related_course['short_description'] }}</p>
+    {% if related_course['reason'] %}
+    <div class="recommendation-reason-badge">
+      <span class="reason-icon">💡</span>
+      <span class="reason-text">{{ related_course['reason'] }}</span>
+    </div>
+    {% endif %}
     <div class="card-meta"><span>{% if related_course['price'] == '0.00' %}Free{% else %}{{ related_course['currency'] }} {{ related_course['price'] }}{% endif %}</span><span>{% for tag in related_course['tags'] %}{{ tag }}{% if not loop.last %} · {% endif %}{% endfor %}</span></div>
     {% set action = related_course['action'] %}{% include "catalog/_course_action.html" %}
   </div>

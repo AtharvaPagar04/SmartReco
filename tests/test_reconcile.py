@@ -11,7 +11,7 @@ async def test_reconcile_orphan_deletion_and_protection(db_session, course, monk
     await store.ensure_collection()
 
     # 1. Insert a healthy point for the active SQL course
-    healthy_vector = [0.1] * settings.vector_size
+    healthy_vector = [0.1 + i * 0.0001 for i in range(settings.vector_size)]
     lineage = {
         "embedding_model": settings.mesh_embedding_model,
         "embedding_dimension": settings.vector_size,
@@ -22,7 +22,7 @@ async def test_reconcile_orphan_deletion_and_protection(db_session, course, monk
 
     # 2. Insert an orphan point with no matching SQL course
     orphan_id = str(uuid.uuid4())
-    orphan_vector = [0.2] * settings.vector_size
+    orphan_vector = [0.2 + i * 0.0001 for i in range(settings.vector_size)]
     orphan_payload = {
         "course_id": orphan_id,
         "title": "Orphan Test Course",
@@ -78,7 +78,8 @@ async def test_reconcile_failed_deletion_reporting(db_session, monkeypatch):
     await store.ensure_collection()
 
     orphan_id = str(uuid.uuid4())
-    await store.upsert([0.1] * settings.vector_size, {"course_id": orphan_id, "version": 1, "is_active": True, "embedding_model": settings.mesh_embedding_model, "embedding_dimension": settings.vector_size, "embedding_schema_version": settings.embedding_schema_version})
+    orphan_vector = [0.1 + i * 0.0001 for i in range(settings.vector_size)]
+    await store.upsert(orphan_vector, {"course_id": orphan_id, "version": 1, "is_active": True, "embedding_model": settings.mesh_embedding_model, "embedding_dimension": settings.vector_size, "embedding_schema_version": settings.embedding_schema_version})
     store.close()
 
     async def failing_delete(self, point_id):

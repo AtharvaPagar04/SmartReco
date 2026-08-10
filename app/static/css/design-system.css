@@ -829,6 +829,12 @@ tr:last-child td {
   border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
+.alert.warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
 /* ── 16. Path Builder Wizard & Selection Cards ──────────────── */
 .path-wizard fieldset {
   background: rgba(13, 14, 20, 0.85);
@@ -3442,4 +3448,23 @@ html {
   font-size: 14px;
   color: #94a3b8;
   margin: 4px 0 0;
+}
+
+.recommendation-reason-badge {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin: 6px 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #a5b4fc;
+}
+
+.recommendation-reason-badge .reason-icon {
+  font-size: 13px;
+  flex-shrink: 0;
 }

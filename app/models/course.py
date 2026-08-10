@@ -79,7 +79,20 @@ class Course(TimestampMixin, Base):
         return payload
 
     def embedding_text(self) -> str:
-        return (f"Title: {self.title}\nCategory: {self.category}\nDifficulty: {self.difficulty}\n"
-                f"Instructor: {self.instructor}\nDuration: {self.duration_minutes} minutes\n"
-                f"Tags: {', '.join(self.tags)}\nShort description: {self.short_description}\n"
-                f"Description: {self.description}")
+        parts = [
+            f"Title: {self.title}",
+            f"Category: {self.category}",
+            f"Difficulty: {self.difficulty}",
+            f"Instructor: {self.instructor}",
+            f"Duration: {self.duration_minutes} minutes",
+            f"Tags: {', '.join(self.tags or [])}",
+            f"Short description: {self.short_description}",
+            f"Description: {self.description}",
+        ]
+        if self.what_you_will_learn:
+            parts.append(f"What you will learn: {', '.join(str(x) for x in self.what_you_will_learn)}")
+        if self.tools_used:
+            parts.append(f"Tools used: {', '.join(str(x) for x in self.tools_used)}")
+        if self.prerequisites:
+            parts.append(f"Prerequisites: {', '.join(str(x) for x in self.prerequisites)}")
+        return "\n".join(parts)

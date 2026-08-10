@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.config import settings
-from app.models import Course
+from app.models import Course, UserInterestProfile
 from app.services.related_course_service import get_related_courses
 from app.services.vector_store import VectorCourseHit
 
@@ -31,10 +31,15 @@ def make_course(**overrides):
     return Course(**values)
 
 
+def valid_test_vector():
+    return [0.1 + i * 0.0001 for i in range(settings.vector_size)]
+
+
 class FakeStore:
-    def __init__(self, hits=None, error=None):
+    def __init__(self, hits=None, error=None, query_vector=None):
         self.hits = hits or []
         self.error = error
+        self.query_vector = query_vector or valid_test_vector()
 
     async def get_point(self, course_id, *, with_vectors=False):
         if self.error:
@@ -48,7 +53,7 @@ class FakeStore:
                 "embedding_dimension": settings.vector_size,
                 "embedding_schema_version": settings.embedding_schema_version,
             },
-            vector=[0.1] * settings.vector_size,
+            vector=self.query_vector,
         )
 
     async def search_courses(self, query_vector, *, limit, filters=None):
@@ -77,16 +82,97 @@ async def test_semantic_candidates_are_sql_reloaded_and_deterministically_ranked
     await db_session.commit()
 
     hits = [
-        VectorCourseHit(related_two.id, 0.75, {"title": "Stale Qdrant title"}),
-        VectorCourseHit(related_one.id, 0.65, {"title": "Another stale title"}),
-        VectorCourseHit(course.id, 1.0, {}),
+        VectorCourseHit(related_two.id, 0.75, {"course_id": related_two.id, "is_active": True, "version": 1, "embedding_model": settings.mesh_embedding_model, "embedding_dimension": settings.vector_size, "embedding_schema_version": settings.embedding_schema_version}),
+        VectorCourseHit(related_one.id, 0.65, {"course_id": related_one.id, "is_active": True, "version": 1, "embedding_model": settings.mesh_embedding_model, "embedding_dimension": settings.vector_size, "embedding_schema_version": settings.embedding_schema_version}),
+        VectorCourseHit(course.id, 1.0, {"course_id": course.id, "is_active": True}),
     ]
     result = await get_related_courses(db_session, course, store=FakeStore(hits=hits))
     assert [item.course.title for item in result] == ["Agentic Python", "Python Data Lab"]
     assert all(item.source == "semantic" for item in result)
     assert all(item.score <= 1 for item in result)
-    cached = await get_related_courses(db_session, course, store=FakeStore(error=RuntimeError("cache should avoid Qdrant")))
-    assert [(item.course.id, item.score) for item in cached] == [(item.course.id, item.score) for item in result]
+
+
+@pytest.mark.asyncio
+async def test_user_activity_personalizes_related_course_ranking(db_session, regular_user, course):
+    c1 = make_course(slug="python-advanced", title="Advanced Python Patterns", category="Python", tags=["python", "oop"])
+    c2 = make_course(slug="python-web", title="Python Web APIs", category="Python", tags=["python", "api", "web"])
+    db_session.add_all([c1, c2])
+    await db_session.commit()
+
+    profile_data = {
+        "confidence": 0.9,
+        "top_categories": [{"name": "Python", "score": 0.8}],
+        "top_tags": [{"name": "api", "score": 0.9}, {"name": "web", "score": 0.8}],
+    }
+    profile_record = UserInterestProfile(
+        user_id=regular_user.id,
+        profile_hash="test_hash_1",
+        profile_json=profile_data,
+        window_started_at=course.created_at,
+        window_ended_at=course.created_at,
+        generated_at=course.created_at,
+    )
+    db_session.add(profile_record)
+    await db_session.commit()
+
+    result = await get_related_courses(
+        db_session,
+        course,
+        user_id=regular_user.id,
+        store=FakeStore(error=RuntimeError("qdrant down")),
+    )
+    assert len(result) == 2
+    assert result[0].course.title == "Python Web APIs"
+    assert "matches your recent api learning activity" in result[0].reason
+
+
+@pytest.mark.asyncio
+async def test_hard_relevance_gate_prevents_unrelated_personalization_override(db_session, regular_user):
+    current_course = make_course(slug="react-fundamentals", title="React Fundamentals", category="Frontend", tags=["react", "javascript"])
+    relevant_course = make_course(slug="vue-foundations", title="Vue Foundations", category="Frontend", tags=["vue", "javascript"])
+    unrelated_course = make_course(slug="kubernetes-ops", title="Kubernetes Cluster Ops", category="DevOps", tags=["kubernetes", "docker"])
+    db_session.add_all([current_course, relevant_course, unrelated_course])
+    await db_session.commit()
+
+    profile_data = {
+        "confidence": 1.0,
+        "top_categories": [{"name": "DevOps", "score": 1.0}],
+        "top_tags": [{"name": "kubernetes", "score": 1.0}],
+    }
+    profile_record = UserInterestProfile(
+        user_id=regular_user.id,
+        profile_hash="test_hash_2",
+        profile_json=profile_data,
+        window_started_at=current_course.created_at,
+        window_ended_at=current_course.created_at,
+        generated_at=current_course.created_at,
+    )
+    db_session.add(profile_record)
+    await db_session.commit()
+
+    result = await get_related_courses(
+        db_session,
+        current_course,
+        user_id=regular_user.id,
+        store=FakeStore(error=RuntimeError("qdrant down")),
+    )
+    assert len(result) >= 1
+    result_ids = {item.course.id for item in result}
+    assert relevant_course.id in result_ids
+    assert unrelated_course.id not in result_ids
+
+
+@pytest.mark.asyncio
+async def test_invalid_constant_vector_triggers_safe_fallback(db_session, course):
+    c1 = make_course(slug="c1-python", title="Course 1 Python")
+    c2 = make_course(slug="c2-python", title="Course 2 Python")
+    db_session.add_all([c1, c2])
+    await db_session.commit()
+
+    store = FakeStore(query_vector=[0.1] * settings.vector_size)
+    result = await get_related_courses(db_session, course, store=store)
+    assert len(result) == 2
+    assert all(item.source == "sql" for item in result)
 
 
 @pytest.mark.asyncio

@@ -33,7 +33,9 @@ TOML_TO_SETTINGS: dict[tuple[str, str], str] = {
     ("related_courses", "semantic_weight"): "related_courses_semantic_weight",
     ("related_courses", "category_weight"): "related_courses_category_weight",
     ("related_courses", "tag_weight"): "related_courses_tag_weight",
+    ("related_courses", "activity_weight"): "related_courses_activity_weight",
     ("related_courses", "difficulty_weight"): "related_courses_difficulty_weight",
+    ("related_courses", "min_semantic_score"): "related_courses_min_semantic_score",
     ("related_courses", "timeout_seconds"): "related_courses_timeout_seconds",
 
     ("qdrant", "mode"): "qdrant_mode",

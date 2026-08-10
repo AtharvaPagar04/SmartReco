@@ -382,26 +382,43 @@ async def archive_path(path_id: str, request: Request, user: User = Depends(get_
 @router.post("/learning-paths/{path_id}/items/{item_id}/replace")
 async def replace_path_item(path_id: str, item_id: str, request: Request, reason: str = Form("PREFER_TOPIC"), user: User = Depends(get_user), db: AsyncSession = Depends(get_db), csrf_token: str = Form("")):
     validate_csrf_token(request, csrf_token)
+    trace_id = str(uuid.uuid4())
+    log_learning_path_step(router_logger, "learning_path.replace.request.start", trace_id, path_id=path_id, item_id=item_id, requested_difficulty=reason)
     path = await get_owned_path(db, user.id, path_id)
     if not path:
+        log_learning_path_step(router_logger, "learning_path.replace.request.failed", trace_id, path_id=path_id, item_id=item_id, path_found=False, item_found=False, error_reason="PATH_NOT_FOUND")
         raise HTTPException(status_code=404, detail="Learning path not found")
     item = next((value for value in path.items if value.id == item_id), None)
     if not item or not item.course:
+        log_learning_path_step(router_logger, "learning_path.replace.request.failed", trace_id, path_id=path_id, item_id=item_id, path_found=True, item_found=False, error_reason="ITEM_NOT_FOUND")
         raise HTTPException(status_code=404, detail="Path stage not found")
-    if not await replace_item(db, path, item, reason):
-        flash(request, "No grounded replacement is available right now.", "warning")
+
+    result = await replace_item(db, path, item, reason, trace_id=trace_id)
+    if not result.replaced:
+        flash(request, result.user_message, "warning")
     else:
-        await _record_path_event(
-            db,
-            request,
-            user.id,
-            "LEARNING_PATH_COURSE_REPLACED",
-            path_id=path.id,
-            primary_domain=path.primary_domain,
-            goal_code=path.goal_code,
-            course_count=len(path.items),
-        )
-        flash(request, "The stage was replaced and the totals were recalculated.", "success")
+        try:
+            log_learning_path_step(router_logger, "learning_path.replace.step.start", trace_id, step="persistence.commit", path_id=path.id, item_id=item.id)
+            await db.commit()
+            log_learning_path_step(router_logger, "learning_path.replace.step.success", trace_id, step="persistence.commit", path_id=path.id, item_id=item.id)
+            await _record_path_event(
+                db,
+                request,
+                user.id,
+                "LEARNING_PATH_COURSE_REPLACED",
+                path_id=path.id,
+                primary_domain=path.primary_domain,
+                goal_code=path.goal_code,
+                course_count=len(path.items),
+            )
+            flash_category = "info" if result.source == "RELATED_DOMAIN" else "success"
+            flash(request, result.user_message, flash_category)
+        except Exception as exc:
+            await db.rollback()
+            log_learning_path_step(router_logger, "learning_path.replace.step.error", trace_id, step="persistence.commit", path_id=path.id, item_id=item.id, exception_class=exc.__class__.__name__, sanitized_message=str(exc)[:200])
+            log_learning_path_step(router_logger, "learning_path.replace.request.failed", trace_id, path_id=path.id, item_id=item.id, error_reason="COMMIT_FAILED")
+            flash(request, "We found a replacement but could not save it. Please try again.", "error")
+            return RedirectResponse(f"/learning-paths/{path.id}", status_code=303)
     await db.commit()
     return RedirectResponse(f"/learning-paths/{path.id}", status_code=303)
 

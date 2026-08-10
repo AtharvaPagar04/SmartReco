@@ -123,10 +123,10 @@ async def test_qdrant_vector_store_upsert_and_delete(tmp_path, monkeypatch, cour
     await store.ensure_collection()
 
     # Test dimension validation
-    with pytest.raises(ValueError, match="does not match VECTOR_SIZE"):
-        await store.upsert([0.1] * 10, course.vector_payload())
+    with pytest.raises(ValueError):
+        await store.upsert([0.1 + i * 0.0001 for i in range(10)], course.vector_payload())
 
-    fake_vector = [0.1] * settings.vector_size
+    fake_vector = [0.1 + i * 0.0001 for i in range(settings.vector_size)]
     payload = course.vector_payload()
     await store.upsert(fake_vector, payload)
 
@@ -143,7 +143,7 @@ async def test_qdrant_vector_store_upsert_and_delete(tmp_path, monkeypatch, cour
 @pytest.mark.asyncio
 async def test_scheduler_jobs_create_fresh_async_sessions(db_session, course, monkeypatch):
     async def fake_embed(_course):
-        return [0.1] * settings.vector_size
+        return [0.1 + i * 0.0001 for i in range(settings.vector_size)]
 
     monkeypatch.setattr(sync_service, "embed_course", fake_embed)
 
@@ -190,7 +190,7 @@ async def test_successful_sync_persists_lineage(db_session, course, monkeypatch)
             return None
 
     async def fake_embed(_course):
-        return [0.1] * settings.vector_size
+        return [0.1 + i * 0.0001 for i in range(settings.vector_size)]
 
     monkeypatch.setattr(sync_service, "VectorStore", FakeStore)
     monkeypatch.setattr(sync_service, "embed_course", fake_embed)
@@ -220,7 +220,7 @@ async def test_qdrant_isolation_regression_prevents_dev_collection_contamination
 
     store = VectorStore()
     await store.ensure_collection()
-    fake_vector = [0.1] * settings.vector_size
+    fake_vector = [0.1 + i * 0.0001 for i in range(settings.vector_size)]
     await store.upsert(fake_vector, course.vector_payload())
 
     hits = await store.search_courses(fake_vector, limit=5)

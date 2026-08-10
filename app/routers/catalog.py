@@ -41,6 +41,7 @@ def _related_view(item) -> dict:
         "duration_minutes": course.duration_minutes,
         "thumbnail_url": course.thumbnail_url,
         "source": item.source,
+        "reason": getattr(item, "reason", ""),
         "enrolled": False,
     }
 
@@ -129,7 +130,6 @@ async def complete_course(slug: str, request: Request, user: User = Depends(get_
     return RedirectResponse(f"/courses/{course.slug}", status_code=303)
 
 
-
 @router.get("/courses/{slug}")
 async def course_detail(slug: str, request: Request, db: AsyncSession = Depends(get_db)):
     course = await public_by_slug(db, slug)
@@ -143,7 +143,7 @@ async def course_detail(slug: str, request: Request, db: AsyncSession = Depends(
         touch_enrollment(enrollment, datetime.now(timezone.utc).replace(tzinfo=None))
         await db.commit()
     try:
-        related = await get_related_courses(db, course, limit=2, excluded_course_ids=access_course_ids)
+        related = await get_related_courses(db, course, limit=2, user_id=user.id if user else None, excluded_course_ids=access_course_ids)
         related_actions = await load_course_actions(db, [item.course for item in related], user.id if user else None)
         related_courses = [{**_related_view(item), "enrolled": item.course.id in enrolled_course_ids, "action": related_actions[item.course.id], "rank": rank} for rank, item in enumerate(related, 1)]
     except Exception as exc:

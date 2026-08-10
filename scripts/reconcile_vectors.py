@@ -14,7 +14,7 @@ from app.config import settings
 from app.database import async_session_maker
 from app.models import Course, VectorOutbox
 from app.repositories.vector_outbox import create as create_outbox
-from app.services.vector_store import VectorStore
+from app.services.vector_store import VectorStore, is_valid_vector
 
 
 async def reconcile(*, dry_run: bool = True, repair: bool = False, course_id: str | None = None, batch_size: int = 100) -> Counter:
@@ -31,7 +31,7 @@ async def reconcile(*, dry_run: bool = True, repair: bool = False, course_id: st
     store = VectorStore()
     try:
         try:
-            points = await store.scroll_points(limit=batch_size)
+            points = await store.scroll_points(limit=batch_size, with_vectors=True)
         except Exception as exc:
             print(f"Qdrant unavailable: {str(exc)[:200]}", file=sys.stderr)
             return Counter({"unavailable": 1, "repairs_failed": 1})
@@ -51,8 +51,11 @@ async def reconcile(*, dry_run: bool = True, repair: bool = False, course_id: st
                 continue
 
             payload = getattr(point, "payload", None) or {} if point else None
+            vector = getattr(point, "vector", None)
             if not point:
                 status = "missing"
+            elif not is_valid_vector(vector):
+                status = "invalid_vector"
             elif payload.get("version") != course.version:
                 status = "stale_course_version"
             elif payload.get("embedding_model") != settings.mesh_embedding_model:
@@ -150,7 +153,7 @@ async def reconcile(*, dry_run: bool = True, repair: bool = False, course_id: st
             f"Orphan Vector: {counts['orphan_vector']}",
         ]
 
-        for k in ("missing", "stale_course_version", "wrong_model", "wrong_dimension", "wrong_schema_version", "metadata_mismatch", "unexpected_active_point"):
+        for k in ("missing", "invalid_vector", "stale_course_version", "wrong_model", "wrong_dimension", "wrong_schema_version", "metadata_mismatch", "unexpected_active_point"):
             if counts[k] > 0:
                 output_lines.append(f"{k.replace('_', ' ').title()}: {counts[k]}")
 
