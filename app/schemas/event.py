@@ -7,6 +7,7 @@ EVENT_TYPES = {"PAGE_VIEW", "COURSE_IMPRESSION", "COURSE_VIEW", "COURSE_CLICK", 
 
 class EventInput(BaseModel):
     event_id: str | None = Field(default=None, max_length=36)
+    session_id: str | None = Field(default=None, max_length=64)
     schema_version: int = Field(default=1, ge=1, le=10)
     event_type: str
     course_id: str | None = None

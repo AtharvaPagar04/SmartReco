@@ -10,7 +10,7 @@ from app.dependencies import get_user
 from app.models import ExternalIdentity, User
 from app.repositories.events import account_activity
 from app.repositories.enrollments import course_ids_for_user
-from app.repositories.recommendations import current_for_user
+from app.repositories.recommendations import current_for_user, get_or_create_recommendation_preference
 from app.routers.helpers import page
 from app.services.recommendation_view_service import build_recommendation_view
 from app.services.course_action_service import load_course_actions, user_access_course_ids
@@ -26,8 +26,9 @@ async def account(request: Request, user: User = Depends(get_user), db: AsyncSes
     excluded = await user_access_course_ids(db, user.id)
     actions = await load_course_actions(db, [item.course for item in run.items if item.course] if run else [], user.id)
     context = await build_learning_context(db, user.id)
+    pref = await get_or_create_recommendation_preference(db, user.id)
     google_identity = await db.scalar(select(ExternalIdentity).where(ExternalIdentity.user_id == user.id, ExternalIdentity.provider == "GOOGLE"))
-    return page(request, "account/index.html", current_user=user, activity=activity, learning_context=context, recommendation=build_recommendation_view(run, excluded, actions, context), google_auth_enabled=settings.google_auth_enabled, google_identity=google_identity)
+    return page(request, "account/index.html", current_user=user, activity=activity, learning_context=context, recommendation=build_recommendation_view(run, excluded, actions, context), recommendation_preference=pref, google_auth_enabled=settings.google_auth_enabled, google_identity=google_identity)
 
 
 

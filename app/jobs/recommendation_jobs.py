@@ -1,14 +1,18 @@
 from datetime import datetime, timedelta, timezone
+import logging
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from app.config import settings
 from app.database import async_session_maker
-from app.models import RecommendationDelivery, RecommendationItem, RecommendationPreference, RecommendationRun, RecommendationState, User
+from app.models import RecommendationDelivery, RecommendationItem, RecommendationPreference, RecommendationRun, RecommendationState, SessionFollowupState, User
 from app.repositories.recommendations import current_for_user
 from app.services.recommendation_email_service import email_provider, render_digest
 from app.services.recommendation_service import generate_recommendation
+
+logger = logging.getLogger(__name__)
 
 
 async def scan_recommendation_eligibility() -> None:
@@ -79,14 +83,30 @@ async def process_email_deliveries() -> None:
                 continue
             text, html = render_digest(run)
             result = await email_provider().send_recommendation_digest(recipient=delivery.recipient, subject=run.headline or "Your SmartReco learning path", text=text, html=html)
+            followup_state = await db.scalar(
+                select(SessionFollowupState).where(
+                    (SessionFollowupState.recommendation_delivery_id == delivery.id)
+                    | (SessionFollowupState.recommendation_run_id == run.id)
+                )
+            )
             if result.success:
                 delivery.status = "SENT"
                 delivery.sent_at = now
                 delivery.provider_message_id = result.message_id
+                if followup_state:
+                    followup_state.status = "SENT"
+                    followup_state.completed_at = now
+                logger.info("session_followup.delivery.sent", extra={"delivery_id": delivery.id, "provider": settings.email_provider or "console"})
             elif delivery.attempts >= 5 or result.permanent:
                 delivery.status = "FAILED"
                 delivery.error_code = "email_delivery_failed"
                 delivery.error_message = (result.error or "delivery failed")[:500]
+                if followup_state:
+                    followup_state.status = "FAILED"
+                    followup_state.completed_at = now
+                    followup_state.error_code = delivery.error_code
+                    followup_state.error_message = delivery.error_message
+                logger.warning("session_followup.delivery.failed_permanent", extra={"delivery_id": delivery.id, "error": delivery.error_message})
             else:
                 delivery.status = "PENDING"
                 delivery.error_code = "email_delivery_failed"

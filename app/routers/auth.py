@@ -11,7 +11,7 @@ from app.csrf import validate_csrf_token, rotate_csrf_token
 from app.config import settings
 from app.database import get_db
 from app.flash import flash
-from app.models import ActivityEvent, User
+from app.models import ActivityEvent, RecommendationPreference, User
 from app.routers.helpers import page
 from app.repositories.users import by_email
 from app.schemas.auth import LoginForm, RegistrationForm
@@ -54,7 +54,10 @@ async def register(request: Request, full_name: str = Form(""), email: str = For
     normalized = normalize_email(str(form.email))
     if await by_email(db, normalized):
         return page(request, "auth/register.html", current_user=None, errors=["An account with that email already exists."], next=safe_next(next), google_auth_enabled=settings.google_auth_enabled)
-    db.add(User(full_name=form.full_name, email=normalized, password_hash=hash_password(form.password)))
+    user = User(full_name=form.full_name, email=normalized, password_hash=hash_password(form.password))
+    db.add(user)
+    await db.flush()
+    db.add(RecommendationPreference(user_id=user.id, recommendations_enabled=True, session_followup_email_enabled=True))
     await db.commit()
     flash(request, "Account created. You can now log in.", "success")
     target = "/login" if safe_next(next) == "/" else f"/login?next={quote(safe_next(next), safe='/?=&')}"

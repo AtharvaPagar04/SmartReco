@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 from app.config_loader import SUPPORTED_ENVS, TomlConfigSettingsSource, load_toml_settings
@@ -84,14 +84,26 @@ class Settings(BaseSettings):
     langsmith_project: str = "smartreco"
     langsmith_endpoint: str = "https://api.smith.langchain.com"
     email_provider: str = "console"
-    email_from_address: str = ""
+    email_from_address: str = Field("", validation_alias=AliasChoices("EMAIL_FROM_ADDRESS", "EMAIL_FROM"))
     email_from_name: str = "SmartReco"
+    resend_api_key: str = Field("", validation_alias=AliasChoices("RESEND_API_KEY"))
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_username: str = ""
     smtp_password: str = ""
     smtp_use_tls: bool = True
+
+    @property
+    def email_from(self) -> str:
+        return self.email_from_address
     app_base_url: str = "http://127.0.0.1:8001"
+    session_followup_enabled: bool = True
+    session_followup_inactivity_minutes: int = 1
+    session_followup_scan_interval_seconds: int = 15
+    session_followup_min_signal_score: float = 3.0
+    session_followup_max_courses: int = 3
+    session_followup_cooldown_hours: int = 6
+    session_followup_min_meaningful_events: int = 1
     google_auth_enabled: bool = False
     google_client_id: str = ""
     google_client_secret: str = ""
@@ -180,6 +192,13 @@ def validate_runtime_configuration(settings: Settings) -> None:
     if settings.email_provider == "smtp":
         if not settings.smtp_host or not settings.smtp_username or not settings.smtp_password or not settings.email_from_address:
             raise ValueError("SMTP email configuration error: SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, and EMAIL_FROM_ADDRESS are required when EMAIL_PROVIDER is set to 'smtp'.")
+    elif settings.email_provider == "resend":
+        if not settings.resend_api_key or not settings.email_from_address:
+            raise ValueError("Resend email configuration error: RESEND_API_KEY and EMAIL_FROM_ADDRESS (or EMAIL_FROM) are required when EMAIL_PROVIDER is set to 'resend'.")
+    elif settings.email_provider == "console":
+        pass
+    else:
+        raise ValueError(f"Invalid EMAIL_PROVIDER: '{settings.email_provider}'. Must be one of 'console', 'smtp', or 'resend'.")
 
     if settings.vector_size < 1 or settings.event_batch_max_size > 50 or settings.mesh_total_budget_seconds < 1:
         raise ValueError("Invalid vector or event limits")

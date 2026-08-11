@@ -6,9 +6,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
-from app.models import ActivityEvent, Course
+from app.models import ActivityEvent, Course, SessionFollowupState
 from app.services.recommendation_policy_service import mark_user_dirty
 from app.schemas.event import EventInput
+
+TERMINAL_SESSION_STATUSES = {
+    "SENT",
+    "FAILED",
+    "SKIPPED_LOW_SIGNAL",
+    "SKIPPED_NO_RECS",
+    "SKIPPED_COOLDOWN",
+}
 
 
 def server_session_id(session: dict) -> str:
@@ -19,7 +27,25 @@ def server_session_id(session: dict) -> str:
     return value
 
 
-async def ingest_events(db: AsyncSession, events: list[tuple[int, EventInput]], *, user_id: str | None, session_id: str) -> tuple[int, int, list[dict]]:
+async def is_session_terminal(db: AsyncSession, session_id: str) -> bool:
+    if not session_id:
+        return False
+    status = await db.scalar(
+        select(SessionFollowupState.status).where(
+            SessionFollowupState.session_id == session_id
+        )
+    )
+    return status in TERMINAL_SESSION_STATUSES
+
+
+async def ingest_events(
+    db: AsyncSession,
+    events: list[tuple[int, EventInput]],
+    *,
+    user_id: str | None,
+    session_id: str,
+    session_dict: dict | None = None,
+) -> tuple[int, int, list[dict]]:
     accepted, duplicates, errors = 0, 0, []
     rows: list[tuple[int, ActivityEvent]] = []
     seen: set[str] = set()
@@ -27,6 +53,13 @@ async def ingest_events(db: AsyncSession, events: list[tuple[int, EventInput]], 
     existing_ids = set()
     if supplied_ids:
         existing_ids = set((await db.scalars(select(ActivityEvent.event_id).where(ActivityEvent.event_id.in_(supplied_ids)))).all())
+
+    # Server defense: If the default session_id has a terminal followup state, rotate it.
+    if await is_session_terminal(db, session_id):
+        session_id = uuid4().hex
+        if session_dict is not None:
+            session_dict["session_id"] = session_id
+
     for index, event in events:
         if len(str(event.metadata).encode()) > settings.event_metadata_max_bytes:
             errors.append({"index": index, "code": "metadata_too_large"})
@@ -61,7 +94,16 @@ async def ingest_events(db: AsyncSession, events: list[tuple[int, EventInput]], 
             duplicates += 1
             continue
         seen.add(event_id)
-        rows.append((index, ActivityEvent(event_id=event_id, schema_version=event.schema_version, user_id=user_id, session_id=session_id, event_type=event.event_type, course_id=event.course_id, search_query=event.normalized_search(), page_path=event.page_path, metadata_json=event.metadata, duration_ms=event.duration_ms, occurred_at=occurred, received_at=now)))
+
+        # Resolve event session_id with defense check
+        evt_session_id = event.session_id or session_id
+        if await is_session_terminal(db, evt_session_id):
+            evt_session_id = session_id if not await is_session_terminal(db, session_id) else uuid4().hex
+            session_id = evt_session_id
+            if session_dict is not None:
+                session_dict["session_id"] = session_id
+
+        rows.append((index, ActivityEvent(event_id=event_id, schema_version=event.schema_version, user_id=user_id, session_id=evt_session_id, event_type=event.event_type, course_id=event.course_id, search_query=event.normalized_search(), page_path=event.page_path, metadata_json=event.metadata, duration_ms=event.duration_ms, occurred_at=occurred, received_at=now)))
     for _, row in rows:
         try:
             async with db.begin_nested():

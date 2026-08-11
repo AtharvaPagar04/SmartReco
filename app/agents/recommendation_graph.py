@@ -21,6 +21,7 @@ class RecommendationGraphState(TypedDict, total=False):
     run_id: str
     user_id: str
     trigger_type: str
+    session_profile_override: dict | None
     profile: dict
     profile_hash: str
     retrieval_query: str
@@ -55,6 +56,13 @@ def build_recommendation_graph(db):
     graph = StateGraph(RecommendationGraphState)
 
     async def load_or_build_profile(state):
+        # SESSION_FOLLOWUP: use the session-specific profile supplied by the caller
+        override = state.get("session_profile_override")
+        if override:
+            import hashlib, json
+            ph = hashlib.sha256(json.dumps(override, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+            return {"profile": override, "profile_hash": ph, "refinement_count": 0, "repair_count": 0, "errors": []}
+        # Normal path: load from database
         from app.models import UserInterestProfile
         profile_row = await db.scalar(__import__("sqlalchemy", fromlist=["select"]).select(UserInterestProfile).where(UserInterestProfile.user_id == state["user_id"]))
         if not profile_row:

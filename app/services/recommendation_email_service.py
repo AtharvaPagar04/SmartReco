@@ -62,5 +62,100 @@ class SMTPEmailProvider:
         return await asyncio.to_thread(send)
 
 
+import resend
+
+class ResendEmailProvider:
+    def __init__(self, api_key: str | None = None, from_address: str | None = None):
+        self.api_key = api_key or settings.resend_api_key
+        self.from_address = from_address or settings.email_from_address
+
+    async def send_recommendation_digest(self, *, recipient: str, subject: str, text: str, html: str) -> DeliveryResult:
+        def send_sync() -> DeliveryResult:
+            if not self.api_key:
+                return DeliveryResult(False, error="resend_api_key_missing", permanent=True)
+            if not self.from_address:
+                return DeliveryResult(False, error="email_from_missing", permanent=True)
+
+            resend.api_key = self.api_key
+            params = {
+                "from": self.from_address,
+                "to": recipient,
+                "subject": subject,
+                "html": html,
+                "text": text,
+            }
+            try:
+                response = resend.Emails.send(params)
+                msg_id = None
+                if isinstance(response, dict):
+                    msg_id = response.get("id")
+                elif hasattr(response, "id"):
+                    msg_id = getattr(response, "id")
+                elif hasattr(response, "get"):
+                    msg_id = response.get("id")
+
+                logger.info(
+                    "recommendation.delivery.sent",
+                    extra={
+                        "provider": "resend",
+                        "provider_message_id": msg_id,
+                        "recipient": recipient,
+                    },
+                )
+                return DeliveryResult(True, message_id=msg_id or "resend")
+            except resend.exceptions.ResendError as exc:
+                err_msg = str(exc)
+                code = getattr(exc, "code", None)
+                is_permanent = (
+                    code in (401, 403, 422)
+                    or isinstance(
+                        exc,
+                        (
+                            resend.exceptions.InvalidApiKeyError,
+                            resend.exceptions.MissingApiKeyError,
+                            resend.exceptions.ValidationError,
+                            resend.exceptions.MissingRequiredFieldsError,
+                        ),
+                    )
+                )
+                logger.warning(
+                    "resend.delivery.failed",
+                    extra={
+                        "provider": "resend",
+                        "recipient": recipient,
+                        "error": err_msg,
+                        "code": code,
+                        "permanent": is_permanent,
+                    },
+                )
+                return DeliveryResult(False, error=f"resend_error: {err_msg}", permanent=is_permanent)
+            except Exception as exc:
+                err_msg = str(exc)
+                logger.warning(
+                    "resend.delivery.failed",
+                    extra={
+                        "provider": "resend",
+                        "recipient": recipient,
+                        "error": err_msg,
+                        "permanent": False,
+                    },
+                )
+                return DeliveryResult(False, error=f"resend_error: {err_msg}", permanent=False)
+
+        return await asyncio.to_thread(send_sync)
+
+
 def email_provider():
-    return SMTPEmailProvider() if settings.email_provider == "smtp" and settings.smtp_host and settings.email_from_address else ConsoleEmailProvider()
+    provider = settings.email_provider.lower()
+    if provider == "console":
+        return ConsoleEmailProvider()
+    elif provider == "smtp":
+        if not settings.smtp_host or not settings.email_from_address:
+            raise ValueError("SMTP email provider missing required configuration: SMTP_HOST and EMAIL_FROM_ADDRESS are required when EMAIL_PROVIDER is set to 'smtp'.")
+        return SMTPEmailProvider()
+    elif provider == "resend":
+        if not settings.resend_api_key or not settings.email_from_address:
+            raise ValueError("Resend email provider missing required configuration: RESEND_API_KEY and EMAIL_FROM_ADDRESS (or EMAIL_FROM) are required when EMAIL_PROVIDER is set to 'resend'.")
+        return ResendEmailProvider()
+    else:
+        raise ValueError(f"Unsupported EMAIL_PROVIDER: '{settings.email_provider}'. Must be one of 'console', 'smtp', or 'resend'.")

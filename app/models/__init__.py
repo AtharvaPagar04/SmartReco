@@ -14,7 +14,8 @@ from app.models.recommendation import (
     RecommendationPreference,
     RecommendationRun,
     RecommendationState,
+    SessionFollowupState,
     UserInterestProfile,
 )
 
-__all__ = ["Base", "User", "ExternalIdentity", "Course", "Enrollment", "ShoppingCart", "CartItem", "Order", "OrderItem", "CourseEntitlement", "ActivityEvent", "VectorOutbox", "UserInterestProfile", "RecommendationState", "RecommendationRun", "RecommendationItem", "RecommendationFeedback", "RecommendationPreference", "RecommendationDelivery", "LearningPath", "LearningPathItem", "LearningPathGenerationRun", "LearningPathStatus"]
+__all__ = ["Base", "User", "ExternalIdentity", "Course", "Enrollment", "ShoppingCart", "CartItem", "Order", "OrderItem", "CourseEntitlement", "ActivityEvent", "VectorOutbox", "UserInterestProfile", "RecommendationState", "RecommendationRun", "RecommendationItem", "RecommendationFeedback", "RecommendationPreference", "RecommendationDelivery", "SessionFollowupState", "LearningPath", "LearningPathItem", "LearningPathGenerationRun", "LearningPathStatus"]

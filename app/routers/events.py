@@ -45,7 +45,7 @@ async def _ingest(request: Request, db: AsyncSession, *, beacon: bool = False):
                 code = str(exc).split("\n", 1)[0][:100]
             errors.append({"index": index, "code": code})
     user = await current_user(request, db)
-    accepted, duplicates, service_errors = await ingest_events(db, valid, user_id=user.id if user else None, session_id=server_session_id(request.session))
+    accepted, duplicates, service_errors = await ingest_events(db, valid, user_id=user.id if user else None, session_id=server_session_id(request.session), session_dict=request.session)
     return {"accepted": accepted, "duplicates": duplicates, "rejected": len(errors) + len(service_errors), "errors": errors + service_errors}
 
 

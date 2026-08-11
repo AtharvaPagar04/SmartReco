@@ -93,12 +93,22 @@ def test_smtp_email_requires_credentials():
         validate_runtime_configuration(s)
 
 
+def test_resend_email_requires_credentials(monkeypatch):
+    monkeypatch.setenv("RESEND_API_KEY", "")
+    s = Settings(app_env="test", email_provider="resend")
+    with pytest.raises(ValueError, match="RESEND_API_KEY and EMAIL_FROM_ADDRESS"):
+        validate_runtime_configuration(s)
+
+
 from app.config import get_settings
 
 
 def test_check_config_does_not_print_secrets(capsys, monkeypatch):
     monkeypatch.setenv("MESH_API_KEY", "super-secret-mesh-key")
     monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "super-secret-google-secret")
+    monkeypatch.setenv("EMAIL_PROVIDER", "resend")
+    monkeypatch.setenv("RESEND_API_KEY", "super-secret-resend-key")
+    monkeypatch.setenv("EMAIL_FROM", "SmartReco <onboarding@resend.dev>")
     get_settings.cache_clear()
 
     success = check_config()
@@ -110,8 +120,9 @@ def test_check_config_does_not_print_secrets(capsys, monkeypatch):
     stdout_stderr = captured.out + captured.err
     assert "super-secret-mesh-key" not in stdout_stderr
     assert "super-secret-google-secret" not in stdout_stderr
+    assert "super-secret-resend-key" not in stdout_stderr
     assert "API key configured: yes" in stdout_stderr
-    assert "Client secret configured: yes" in stdout_stderr
+    assert "From address configured: yes" in stdout_stderr
 
 
 def test_run_migrations_on_start_setting_defaults_false_and_accepts_env(monkeypatch):

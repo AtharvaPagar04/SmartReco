@@ -61,6 +61,12 @@ def check_config() -> bool:
 
     print("\nEmail:")
     print(f"- Provider: {settings.email_provider}")
+    if settings.email_provider == "resend":
+        print(f"- API key configured: {'yes' if bool(settings.resend_api_key) else 'no'}")
+        print(f"- From address configured: {'yes' if bool(settings.email_from_address) else 'no'}")
+    elif settings.email_provider == "smtp":
+        print(f"- SMTP host configured: {'yes' if bool(settings.smtp_host) else 'no'}")
+        print(f"- From address configured: {'yes' if bool(settings.email_from_address) else 'no'}")
 
     print("\nLangSmith:")
     print(f"- Enabled: {'yes' if settings.langsmith_tracing else 'no'}")

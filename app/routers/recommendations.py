@@ -11,7 +11,7 @@ from app.database import get_db
 from app.dependencies import get_user
 from app.models import ActivityEvent, RecommendationFeedback, RecommendationItem, RecommendationPreference, RecommendationState, User
 from app.repositories.recommendation_feedback import FEEDBACK_REASONS, record_feedback
-from app.repositories.recommendations import current_for_user
+from app.repositories.recommendations import current_for_user, get_or_create_recommendation_preference
 from app.repositories.enrollments import course_ids_for_user
 from app.routers.helpers import page
 from app.services.event_service import server_session_id
@@ -131,12 +131,21 @@ async def page_view(request: Request, user: User = Depends(get_user), db: AsyncS
 
 
 @router.post("/account/recommendation-preferences")
-async def update_preferences(request: Request, user: User = Depends(get_user), db: AsyncSession = Depends(get_db), csrf_token: str = Form(""), email_digest_enabled: bool = Form(False)):
+async def update_preferences(
+    request: Request,
+    user: User = Depends(get_user),
+    db: AsyncSession = Depends(get_db),
+    csrf_token: str = Form(""),
+    recommendations_enabled: bool = Form(False),
+    session_followup_email_enabled: bool = Form(False),
+    email_digest_enabled: bool = Form(False),
+):
     validate_csrf_token(request, csrf_token)
-    preference = await db.get(RecommendationPreference, user.id)
-    if not preference:
-        preference = RecommendationPreference(user_id=user.id)
-        db.add(preference)
+    preference = await get_or_create_recommendation_preference(db, user.id)
+    preference.recommendations_enabled = recommendations_enabled
+    preference.session_followup_email_enabled = session_followup_email_enabled
     preference.email_digest_enabled = email_digest_enabled
     await db.commit()
-    return RedirectResponse("/recommendations", status_code=303)
+    referer = request.headers.get("referer", "/account")
+    target = "/account" if "/account" in referer else ("/recommendations" if "/recommendations" in referer else "/account")
+    return RedirectResponse(target, status_code=303)

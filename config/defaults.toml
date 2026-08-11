@@ -85,6 +85,7 @@ endpoint = "https://api.smith.langchain.com"
 provider = "console"
 from_name = "SmartReco"
 from_address = ""
+resend_api_key = ""
 smtp_port = 587
 smtp_use_tls = true
 
@@ -99,3 +100,11 @@ payments_enabled = true
 payments_mode = "demo"
 cart_max_items = 25
 default_currency = "USD"
+[session_followup]
+enabled = true
+inactivity_minutes = 15
+scan_interval_seconds = 60
+min_signal_score = 3.0
+max_courses = 3
+cooldown_hours = 6
+min_meaningful_events = 1

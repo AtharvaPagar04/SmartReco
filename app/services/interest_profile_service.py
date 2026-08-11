@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -214,6 +215,7 @@ async def build_or_refresh_profile(db: AsyncSession, user_id: str, *, force: boo
         current.generated_at = now
         await db.flush()
         return current
+
     current = UserInterestProfile(
         user_id=user_id,
         version=1,
@@ -225,6 +227,23 @@ async def build_or_refresh_profile(db: AsyncSession, user_id: str, *, force: boo
         window_ended_at=now,
         generated_at=now,
     )
-    db.add(current)
-    await db.flush()
-    return current
+    try:
+        async with db.begin_nested():
+            db.add(current)
+            await db.flush()
+        return current
+    except IntegrityError:
+        existing = await db.scalar(select(UserInterestProfile).where(UserInterestProfile.user_id == user_id))
+        if existing:
+            if existing.profile_hash != snapshot.profile_hash:
+                existing.version += 1
+                existing.profile_hash = snapshot.profile_hash
+            existing.profile_json = snapshot.profile
+            existing.source_event_count = snapshot.event_count
+            existing.source_event_max_occurred_at = snapshot.max_occurred_at
+            existing.window_started_at = now - timedelta(days=settings.recommendation_event_window_days)
+            existing.window_ended_at = now
+            existing.generated_at = now
+            await db.flush()
+            return existing
+        raise

@@ -98,6 +98,14 @@ TOML_TO_SETTINGS: dict[tuple[str, str], str] = {
     ("commerce", "payments_mode"): "payments_mode",
     ("commerce", "cart_max_items"): "cart_max_items",
     ("commerce", "default_currency"): "default_currency",
+
+    ("session_followup", "enabled"): "session_followup_enabled",
+    ("session_followup", "inactivity_minutes"): "session_followup_inactivity_minutes",
+    ("session_followup", "scan_interval_seconds"): "session_followup_scan_interval_seconds",
+    ("session_followup", "min_signal_score"): "session_followup_min_signal_score",
+    ("session_followup", "max_courses"): "session_followup_max_courses",
+    ("session_followup", "cooldown_hours"): "session_followup_cooldown_hours",
+    ("session_followup", "min_meaningful_events"): "session_followup_min_meaningful_events",
 }
 
 

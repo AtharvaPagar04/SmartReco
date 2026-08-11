@@ -20,4 +20,4 @@ async def test_startup_migrations_create_enrollments(tmp_path, monkeypatch):
     await engine.dispose()
 
     assert "enrollments" in tables
-    assert revision == "0012_expand_learning_path_status"
+    assert revision == "0013_session_followup"

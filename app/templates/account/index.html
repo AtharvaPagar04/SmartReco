@@ -32,6 +32,39 @@
     <div class="auth-method-row"><span>Password</span><strong>{{ 'Available' if current_user.password_hash else 'Not configured' }}</strong></div>
   </section>
 
+  <!-- Recommendation & Email Preferences Section -->
+  <section class="account-section panel preferences-panel" aria-labelledby="preferences-heading">
+    <div class="section-heading-row">
+      <div>
+        <p class="eyebrow">Privacy & Notifications</p>
+        <h2 id="preferences-heading">Recommendation & Email Preferences</h2>
+        <p class="section-description">Control personalized recommendations and post-session email notifications.</p>
+      </div>
+    </div>
+
+    <form class="account-preferences-form" method="post" action="/account/recommendation-preferences">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div class="form-group checkbox-group" style="margin-bottom: 1rem;">
+        <label class="checkbox-label" for="recommendations_enabled" style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; font-weight: 600; cursor: pointer;">
+          <input type="checkbox" id="recommendations_enabled" name="recommendations_enabled" value="true" style="width: 1.2rem; height: 1.2rem; flex: 0 0 auto; margin: 0;" {% if recommendation_preference and recommendation_preference.recommendations_enabled %}checked{% endif %}>
+          <span>Enable personalized course recommendations</span>
+        </label>
+      </div>
+
+      <div class="form-group checkbox-group" style="margin-bottom: 1.5rem;">
+        <label class="checkbox-label" for="session_followup_email_enabled" style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; font-weight: 600; cursor: pointer;">
+          <input type="checkbox" id="session_followup_email_enabled" name="session_followup_email_enabled" value="true" style="width: 1.2rem; height: 1.2rem; flex: 0 0 auto; margin: 0;" {% if recommendation_preference and recommendation_preference.session_followup_email_enabled %}checked{% endif %}>
+          <span>Email me personalized course recommendations after my browsing sessions</span>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="button primary">Save Preferences</button>
+      </div>
+    </form>
+  </section>
+
   <!-- Personal Details & Profile Settings Section -->
   <section class="account-section panel account-details-panel" aria-labelledby="personal-details-heading">
     <div class="section-heading-row">

@@ -12,9 +12,28 @@
     return `${raw.slice(0, 8)}-${raw.slice(8, 12)}-4${raw.slice(13, 16)}-8${raw.slice(17, 20)}-${raw.slice(20, 32)}`;
   }
 
+  const sessionKey = 'smartreco_session_id_v1', lastActivityKey = 'smartreco_last_activity_at_v1', defaultInactivityMs = 15 * 60 * 1000;
+
+  function getSessionId() {
+    try {
+      const now = Date.now(), threshold = (window.smartRecoConfig && window.smartRecoConfig.sessionInactivityMs) || defaultInactivityMs;
+      let sid = sessionStorage.getItem(sessionKey);
+      const lastAt = parseInt(sessionStorage.getItem(lastActivityKey) || '0', 10);
+      if (!sid || (lastAt > 0 && (now - lastAt >= threshold))) {
+        sid = eventId();
+        sessionStorage.setItem(sessionKey, sid);
+      }
+      sessionStorage.setItem(lastActivityKey, now.toString());
+      return sid;
+    } catch (_) {
+      return eventId();
+    }
+  }
+
   function add(event) {
     if (queue.length >= max || !event || !event.event_type) return;
-    queue.push({ ...event, event_id: event.event_id || eventId(), schema_version: event.schema_version || 1, page_path: event.page_path || location.pathname, occurred_at: event.occurred_at || new Date().toISOString() });
+    const currentSessionId = getSessionId();
+    queue.push({ ...event, event_id: event.event_id || eventId(), session_id: event.session_id || currentSessionId, schema_version: event.schema_version || 1, page_path: event.page_path || location.pathname, occurred_at: event.occurred_at || new Date().toISOString() });
     try { window.dispatchEvent(new CustomEvent('smartreco:event_tracked', { detail: event })); } catch (_) {}
     if (queue.length >= batchSize) flush(false);
   }

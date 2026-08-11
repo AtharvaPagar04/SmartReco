@@ -4,6 +4,7 @@ from uuid import uuid4
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+
 from app.models.base import Base, TimestampMixin
 
 
@@ -75,6 +76,7 @@ class RecommendationRun(TimestampMixin, Base):
     used_llm_fallback: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     trace_id: Mapped[str | None] = mapped_column(String(200))
     cache_key: Mapped[str | None] = mapped_column(String(128), index=True)
+    source_session_id: Mapped[str | None] = mapped_column(String(64))
     error_code: Mapped[str | None] = mapped_column(String(80))
     error_message: Mapped[str | None] = mapped_column(Text)
     headline: Mapped[str | None] = mapped_column(String(200))
@@ -140,6 +142,7 @@ class RecommendationPreference(TimestampMixin, Base):
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), primary_key=True)
     recommendations_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     email_digest_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    session_followup_email_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     timezone: Mapped[str] = mapped_column(String(64), default="UTC", nullable=False)
     digest_hour_local: Mapped[int] = mapped_column(Integer, default=15, nullable=False)
     maximum_items: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
@@ -164,5 +167,41 @@ class RecommendationDelivery(TimestampMixin, Base):
     attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     provider_message_id: Mapped[str | None] = mapped_column(String(200))
+    error_code: Mapped[str | None] = mapped_column(String(80))
+    error_message: Mapped[str | None] = mapped_column(Text)
+
+
+class SessionFollowupState(TimestampMixin, Base):
+    """Tracks post-session recommendation email lifecycle. One row per (user_id, session_id)."""
+
+    __tablename__ = "session_followup_states"
+    __table_args__ = (
+        UniqueConstraint("user_id", "session_id", name="uq_session_followup_user_session"),
+        Index("ix_session_followup_user", "user_id"),
+        Index("ix_session_followup_status_eligible", "status", "eligible_at"),
+        Index("ix_session_followup_session", "session_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    session_id: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    session_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    eligible_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Lifecycle: PENDING -> PROCESSING -> SENT|SKIPPED_LOW_SIGNAL|SKIPPED_NO_RECS|SKIPPED_COOLDOWN|FAILED
+    status: Mapped[str] = mapped_column(String(40), default="PENDING", nullable=False)
+    processing_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    recommendation_run_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("recommendation_runs.id"))
+    recommendation_delivery_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("recommendation_deliveries.id"))
+
+    event_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    meaningful_event_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    session_signal_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+
+    skip_reason: Mapped[str | None] = mapped_column(String(80))
     error_code: Mapped[str | None] = mapped_column(String(80))
     error_message: Mapped[str | None] = mapped_column(Text)

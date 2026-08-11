@@ -13,6 +13,8 @@ from app.database import get_db
 from app.main import app
 from app.models import Base, Course, User
 from app.security import hash_password
+import app.jobs.recommendation_jobs as rec_jobs
+import app.jobs.session_followup_job as session_job
 import app.services.vector_sync_service as sync_service
 import scripts.create_admin as create_admin_script
 import scripts.reconcile_vectors as reconcile_script
@@ -42,6 +44,8 @@ async def db_session(monkeypatch):
     monkeypatch.setattr(seed_script, "async_session_maker", maker)
     monkeypatch.setattr(create_admin_script, "async_session_maker", maker)
     monkeypatch.setattr(reconcile_script, "async_session_maker", maker)
+    monkeypatch.setattr(session_job, "async_session_maker", maker)
+    monkeypatch.setattr(rec_jobs, "async_session_maker", maker)
     async with maker() as session:
         yield session
     await engine.dispose()

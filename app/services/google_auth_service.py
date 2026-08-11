@@ -17,7 +17,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.models import ExternalIdentity, User
+from app.models import ExternalIdentity, RecommendationPreference, User
 from app.security import normalize_email
 
 logger = logging.getLogger(__name__)
@@ -192,6 +192,7 @@ async def resolve_user(db: AsyncSession, identity_claims: dict[str, str]) -> tup
             async with db.begin_nested():
                 db.add(user)
                 await db.flush()
+                db.add(RecommendationPreference(user_id=user.id, recommendations_enabled=True, session_followup_email_enabled=True))
         except IntegrityError:
             user = await db.scalar(select(User).where(User.email == email))
             if not user:
