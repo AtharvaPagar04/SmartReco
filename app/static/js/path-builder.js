@@ -113,9 +113,80 @@
     if (primary) { domainOrder.splice(0, domainOrder.length, primary.dataset.domainPrimary, ...domainOrder.filter(value => value !== primary.dataset.domainPrimary)); sync(form.querySelector('[data-choice-key="selected_domains"]')); }
     if (remove) { const input = form.querySelector(`input[name="selected_domains"][value="${CSS.escape(remove.dataset.domainRemove)}"]`); if (input) input.checked = false; sync(form.querySelector('[data-choice-key="selected_domains"]')); }
   });
+  let isSubmitting = false;
+
   form.querySelectorAll('[data-next]').forEach(button => button.addEventListener('click', () => { if (validateStep()) show(current + 1); }));
   form.querySelectorAll('[data-back]').forEach(button => button.addEventListener('click', () => show(current - 1)));
-  form.addEventListener('submit', () => syncDomainOrder());
+  form.addEventListener('submit', (event) => {
+    syncDomainOrder();
+    if (!validateStep()) {
+      event.preventDefault();
+      return;
+    }
+    if (isSubmitting) {
+      event.preventDefault();
+      return;
+    }
+    isSubmitting = true;
+
+    const submitBtn = form.querySelector('[data-generate-roadmap-btn], button[type="submit"]');
+    const actionsContainer = submitBtn?.closest('.wizard-actions') || form;
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.dataset.originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Generating roadmap...';
+    }
+
+    form.setAttribute('aria-busy', 'true');
+
+    let statusEl = actionsContainer.querySelector('[data-roadmap-status]');
+    if (!statusEl) {
+      statusEl = document.createElement('div');
+      statusEl.dataset.roadmapStatus = 'true';
+      statusEl.className = 'roadmap-loading-status';
+      statusEl.setAttribute('role', 'status');
+      statusEl.setAttribute('aria-live', 'polite');
+      statusEl.style.display = 'flex';
+      statusEl.style.alignItems = 'center';
+      statusEl.style.gap = '0.75rem';
+      statusEl.style.marginTop = '1rem';
+
+      const spinner = document.createElement('div');
+      spinner.className = 'loading-indicator';
+      spinner.setAttribute('aria-hidden', 'true');
+
+      const message = document.createElement('span');
+      message.className = 'roadmap-loading-text';
+      message.textContent = 'Generating your personalized learning roadmap...';
+
+      statusEl.append(spinner, message);
+      actionsContainer.append(statusEl);
+    } else {
+      statusEl.hidden = false;
+      const message = statusEl.querySelector('.roadmap-loading-text');
+      if (message) {
+        message.textContent = 'Generating your personalized learning roadmap...';
+      }
+    }
+  });
+
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted && isSubmitting) {
+      isSubmitting = false;
+      form.removeAttribute('aria-busy');
+      const submitBtn = form.querySelector('[data-generate-roadmap-btn], button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        if (submitBtn.dataset.originalText) {
+          submitBtn.textContent = submitBtn.dataset.originalText;
+        }
+      }
+      const statusEl = form.querySelector('[data-roadmap-status]');
+      if (statusEl) statusEl.hidden = true;
+    }
+  });
+
   form.querySelector('[data-domain-search]')?.addEventListener('input', event => { const needle = event.target.value.toLowerCase(); form.querySelectorAll('[data-domain-option]').forEach(option => { option.hidden = Boolean(needle && !option.innerText.toLowerCase().includes(needle)); }); });
   show(current);
 })();

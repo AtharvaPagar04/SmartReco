@@ -1,7 +1,8 @@
 (function () {
   const cards = document.querySelectorAll("[data-feedback-card]");
   const manualBtn = document.querySelector("[data-manual-generate-btn]");
-  if (!cards.length && !manualBtn) return;
+  const pendingCards = document.querySelectorAll("[data-replacement-pending]");
+  if (!cards.length && !manualBtn && !pendingCards.length) return;
 
   const tracker = window.smartRecoTracker;
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || "";
@@ -13,6 +14,144 @@
 
   const announce = (message) => { liveRegion.textContent = message; };
   const actionValue = (action, key) => action?.[key] || action?.[key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())];
+
+  let isRefreshing = false;
+
+  async function requestRecommendationRefresh(triggerBtn) {
+    if (isRefreshing) return;
+    isRefreshing = true;
+
+    const allButtons = document.querySelectorAll("[data-manual-generate-btn]");
+    allButtons.forEach((btn) => {
+      btn.disabled = true;
+    });
+
+    const primaryText = triggerBtn ? triggerBtn.textContent : "";
+    if (triggerBtn) {
+      triggerBtn.textContent = "Generating recommendations...";
+    }
+
+    const container = document.querySelector("[data-manual-generate-container]");
+    let statusEl = null;
+    if (container) {
+      statusEl = container.querySelector("[data-generate-status]");
+      if (!statusEl) {
+        statusEl = document.createElement("p");
+        statusEl.dataset.generateStatus = "true";
+        statusEl.className = "recommendation-generate-status";
+        statusEl.setAttribute("role", "status");
+        statusEl.setAttribute("aria-live", "polite");
+        statusEl.style.marginTop = "1rem";
+        statusEl.style.fontWeight = "500";
+        container.append(statusEl);
+      }
+      statusEl.textContent = "We are preparing your personalized recommendations. Please wait...";
+    } else if (triggerBtn) {
+      const parentBlock = triggerBtn.closest(".feedback-replacement-status") || triggerBtn.closest("[data-feedback-card], [data-recommendation-card], .recommendation-card");
+      if (parentBlock) {
+        statusEl = parentBlock.querySelector("[data-generate-status]");
+        if (!statusEl) {
+          statusEl = document.createElement("p");
+          statusEl.dataset.generateStatus = "true";
+          statusEl.className = "recommendation-generate-status";
+          statusEl.setAttribute("role", "status");
+          statusEl.setAttribute("aria-live", "polite");
+          statusEl.style.marginTop = "0.75rem";
+          statusEl.style.fontWeight = "500";
+          parentBlock.append(statusEl);
+        }
+        statusEl.textContent = "Preparing recommendations. Please wait...";
+      }
+    }
+
+    announce("We are preparing your personalized recommendations. Please wait...");
+
+    let previousRunId = null;
+    try {
+      const initRes = await fetch("/api/recommendations/current", {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (initRes.ok) {
+        const initPayload = await initRes.json();
+        previousRunId = initPayload.recommendation?.run_id || null;
+      }
+    } catch (_) {}
+
+    try {
+      const response = await fetch("/api/recommendations/refresh", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrf,
+        },
+        credentials: "same-origin",
+      });
+      if (!response.ok) throw new Error("refresh_failed");
+
+      let pollingAttempts = 0;
+      const pollInterval = setInterval(async () => {
+        pollingAttempts += 1;
+        try {
+          const currRes = await fetch("/api/recommendations/current", {
+            credentials: "same-origin",
+            headers: { Accept: "application/json" },
+          });
+          if (currRes.ok) {
+            const payload = await currRes.json();
+            const rec = payload.recommendation;
+            const newRunId = rec?.run_id;
+            const slots = rec?.recommendation_slots || rec?.recommendations || rec?.items || [];
+            const activeSlots = slots.filter((slot) => {
+              const item = slot.item || (slot.course ? slot : null);
+              return (slot.state === "ACTIVE" || !slot.state) && item && item.course;
+            });
+            const isNewRun = !previousRunId || (newRunId && newRunId !== previousRunId);
+            if (isNewRun && activeSlots.length > 0) {
+              clearInterval(pollInterval);
+              window.location.reload();
+              return;
+            }
+          }
+        } catch (_) {}
+
+        if (pollingAttempts >= 25) {
+          clearInterval(pollInterval);
+          isRefreshing = false;
+          allButtons.forEach((btn) => {
+            btn.disabled = false;
+          });
+          if (triggerBtn) {
+            triggerBtn.textContent = primaryText || "Refresh suggestions";
+          }
+          if (statusEl) {
+            statusEl.textContent = "Unable to complete refresh right now. Please try again.";
+          }
+          announce("Unable to complete refresh right now. Please try again.");
+        }
+      }, 1500);
+    } catch (_) {
+      isRefreshing = false;
+      allButtons.forEach((btn) => {
+        btn.disabled = false;
+      });
+      if (triggerBtn) {
+        triggerBtn.textContent = primaryText || "Refresh suggestions";
+      }
+      if (statusEl) {
+        statusEl.textContent = "Unable to complete refresh right now. Please try again.";
+      }
+      announce("Unable to complete refresh right now. Please try again.");
+    }
+  }
+
+  document.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-manual-generate-btn]");
+    if (btn) {
+      event.preventDefault();
+      requestRecommendationRefresh(btn);
+    }
+  });
 
   function actionControl(label, url, method, secondary) {
     if (!label || !url) return null;
@@ -49,31 +188,50 @@
     if (secondary) stack.append(secondary);
   }
 
-  function setPendingState(card, message, refresh) {
+  function setPendingState(card, message, stateType) {
     const overlay = card.querySelector("[data-feedback-overlay]");
     if (!overlay) return;
     overlay.hidden = false;
     overlay.innerHTML = "";
+    card.classList.add("is-feedback-pending");
+
     const status = document.createElement("div");
     status.className = "feedback-replacement-status";
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
+
     const heading = document.createElement("h4");
-    heading.textContent = refresh ? "Feedback saved" : "Finding a better match";
+    if (stateType === "success") {
+      heading.textContent = "Feedback saved";
+    } else if (stateType === "error") {
+      heading.textContent = "Unable to save feedback";
+    } else {
+      heading.textContent = "Finding a better match";
+    }
+
     const text = document.createElement("p");
     text.textContent = message;
     status.append(heading, text);
-    if (!refresh) {
+
+    if (stateType === "pending" || !stateType) {
       const spinner = document.createElement("div");
       spinner.className = "loading-indicator";
       spinner.setAttribute("aria-hidden", "true");
       status.prepend(spinner);
-    } else {
-      const link = document.createElement("a");
-      link.className = "button secondary";
-      link.href = "/recommendations";
-      link.textContent = "Refresh suggestions";
-      status.append(link);
+    } else if (stateType === "success") {
+      const button = document.createElement("button");
+      button.className = "button secondary";
+      button.type = "button";
+      button.dataset.manualGenerateBtn = "true";
+      button.textContent = "Refresh suggestions";
+      status.append(button);
+    } else if (stateType === "error") {
+      const button = document.createElement("button");
+      button.className = "button secondary";
+      button.type = "button";
+      button.textContent = "Try again";
+      button.addEventListener("click", () => window.location.reload());
+      status.append(button);
     }
     overlay.append(status);
   }
@@ -157,7 +315,7 @@
       }
     }
     card.dataset.polling = "false";
-    setPendingState(card, "We’re combining your feedback with your overall learning activity. Refresh this page shortly if a new course does not appear automatically.", true);
+    setPendingState(card, "We’re combining your feedback with your overall learning activity. Refresh suggestions if a new course does not appear automatically.", "success");
     announce("Your feedback was saved, but a replacement is taking longer than expected.");
   }
 
@@ -185,15 +343,16 @@
       const runId = card.dataset.recommendationRunId;
       const rejectedItemId = card.dataset.recommendationItemId;
       submit.disabled = true;
-      card.classList.add("is-feedback-pending");
-      setPendingState(card, "We’re combining your feedback with your overall learning activity.", false);
+      setPendingState(card, "We’re combining your feedback with your overall learning activity.", "pending");
       try {
         const response = await fetch(form.action, { method: "POST", body: new FormData(form), credentials: "same-origin", headers: { Accept: "application/json" } });
         if (!response.ok) throw new Error("feedback_failed");
         const payload = await response.json();
+        announce("Feedback saved. Finding a better match.");
         await pollReplacement(card, payload.recommendation_run_id || runId, rejectedItemId, visibleCourseIds);
       } catch (_) {
-        setPendingState(card, "Your feedback could not be saved. Refresh later to try again.", true);
+        setPendingState(card, "Your feedback could not be saved. Please try again.", "error");
+        announce("Your feedback could not be saved.");
       }
     });
     card.addEventListener("keydown", (event) => { if (event.key === "Escape" && !overlay.hidden) closeOverlay(card, true); });
@@ -201,75 +360,8 @@
 
   cards.forEach(wireCard);
 
-  document.querySelectorAll("[data-replacement-pending]").forEach((pendingCard) => {
+  pendingCards.forEach((pendingCard) => {
     const visibleCourseIds = new Set([...document.querySelectorAll("[data-recommendation-item]")].map((item) => item.dataset.courseId));
     pollReplacement(pendingCard, null, null, visibleCourseIds);
   });
-
-  if (manualBtn) {
-    manualBtn.addEventListener("click", async () => {
-      manualBtn.disabled = true;
-      const originalText = manualBtn.textContent;
-      manualBtn.textContent = "Generating recommendations...";
-      const container = document.querySelector("[data-manual-generate-container]");
-      if (container) {
-        let status = container.querySelector("[data-generate-status]");
-        if (!status) {
-          status = document.createElement("p");
-          status.dataset.generateStatus = "true";
-          status.className = "recommendation-generate-status";
-          status.setAttribute("role", "status");
-          status.setAttribute("aria-live", "polite");
-          status.style.marginTop = "1rem";
-          status.style.fontWeight = "500";
-          container.append(status);
-        }
-        status.textContent = "We are preparing your personalized recommendations. Please wait...";
-      }
-      try {
-        const response = await fetch("/api/recommendations/refresh", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-Token": csrf,
-          },
-          credentials: "same-origin",
-        });
-        if (!response.ok) throw new Error("refresh_failed");
-
-        let pollingAttempts = 0;
-        const pollInterval = setInterval(async () => {
-          pollingAttempts += 1;
-          try {
-            const currRes = await fetch("/api/recommendations/current", {
-              credentials: "same-origin",
-              headers: { Accept: "application/json" },
-            });
-            if (currRes.ok) {
-              const payload = await currRes.json();
-              const rec = payload.recommendation;
-              const slots = rec?.recommendation_slots || rec?.recommendations || [];
-              const activeSlots = slots.filter((slot) => slot.state === "ACTIVE" || slot.course || slot.item);
-              if (activeSlots.length > 0 || pollingAttempts >= 20) {
-                clearInterval(pollInterval);
-                window.location.reload();
-              }
-            } else if (pollingAttempts >= 20) {
-              clearInterval(pollInterval);
-              window.location.reload();
-            }
-          } catch (_) {
-            if (pollingAttempts >= 20) {
-              clearInterval(pollInterval);
-              window.location.reload();
-            }
-          }
-        }, 1500);
-      } catch (_) {
-        manualBtn.disabled = false;
-        manualBtn.textContent = originalText;
-        announce("Unable to generate recommendations right now. Please try again.");
-      }
-    });
-  }
 })();

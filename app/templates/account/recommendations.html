@@ -129,7 +129,7 @@
                 <p class="section-eyebrow">Feedback saved</p>
                 <h3>Finding a better match</h3>
                 <p>{{ item["message"] }}</p>
-                <a class="button secondary" href="/recommendations">Refresh suggestions</a>
+                <button class="button secondary" type="button" data-manual-generate-btn>Refresh suggestions</button>
               </div>
             </article>
           {% elif item["state"] == "REPLACEMENT_FAILED" %}
@@ -138,7 +138,7 @@
                 <p class="section-eyebrow">Replacement status</p>
                 <h3>Finding a better match</h3>
                 <p>{{ item["message"] }}</p>
-                <a class="button secondary" href="/recommendations">Refresh suggestions</a>
+                <button class="button secondary" type="button" data-manual-generate-btn>Refresh suggestions</button>
               </div>
             </article>
           {% elif item["state"] == "UNAVAILABLE" %}
