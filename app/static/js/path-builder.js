@@ -113,6 +113,44 @@
     if (primary) { domainOrder.splice(0, domainOrder.length, primary.dataset.domainPrimary, ...domainOrder.filter(value => value !== primary.dataset.domainPrimary)); sync(form.querySelector('[data-choice-key="selected_domains"]')); }
     if (remove) { const input = form.querySelector(`input[name="selected_domains"][value="${CSS.escape(remove.dataset.domainRemove)}"]`); if (input) input.checked = false; sync(form.querySelector('[data-choice-key="selected_domains"]')); }
   });
+
+  function setButtonLoading(button) {
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    if (rect.width > 0) button.style.minWidth = `${rect.width}px`;
+    if (rect.height > 0) button.style.minHeight = `${rect.height}px`;
+
+    button.dataset.originalHtml = button.innerHTML;
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.setAttribute('aria-label', 'Generating your path…');
+    button.classList.add('path-generate-btn--loading');
+
+    const spinner = document.createElement('span');
+    spinner.className = 'path-generate-btn__spinner';
+    spinner.setAttribute('aria-hidden', 'true');
+
+    const text = document.createElement('span');
+    text.className = 'path-generate-btn__text';
+    text.textContent = 'Generating your path\u2026';
+
+    button.replaceChildren(spinner, text);
+  }
+
+  function resetButtonLoading(button) {
+    if (!button) return;
+    button.disabled = false;
+    button.removeAttribute('aria-busy');
+    button.removeAttribute('aria-label');
+    button.classList.remove('path-generate-btn--loading');
+    button.style.minWidth = '';
+    button.style.minHeight = '';
+    if (button.dataset.originalHtml) {
+      button.innerHTML = button.dataset.originalHtml;
+      delete button.dataset.originalHtml;
+    }
+  }
+
   let isSubmitting = false;
 
   form.querySelectorAll('[data-next]').forEach(button => button.addEventListener('click', () => { if (validateStep()) show(current + 1); }));
@@ -127,63 +165,26 @@
       event.preventDefault();
       return;
     }
-    isSubmitting = true;
 
     const submitBtn = form.querySelector('[data-generate-roadmap-btn], button[type="submit"]');
-    const actionsContainer = submitBtn?.closest('.wizard-actions') || form;
-
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.dataset.originalText = submitBtn.textContent;
-      submitBtn.textContent = 'Generating roadmap...';
-    }
-
-    form.setAttribute('aria-busy', 'true');
-
-    let statusEl = actionsContainer.querySelector('[data-roadmap-status]');
-    if (!statusEl) {
-      statusEl = document.createElement('div');
-      statusEl.dataset.roadmapStatus = 'true';
-      statusEl.className = 'roadmap-loading-status';
-      statusEl.setAttribute('role', 'status');
-      statusEl.setAttribute('aria-live', 'polite');
-      statusEl.style.display = 'flex';
-      statusEl.style.alignItems = 'center';
-      statusEl.style.gap = '0.75rem';
-      statusEl.style.marginTop = '1rem';
-
-      const spinner = document.createElement('div');
-      spinner.className = 'loading-indicator';
-      spinner.setAttribute('aria-hidden', 'true');
-
-      const message = document.createElement('span');
-      message.className = 'roadmap-loading-text';
-      message.textContent = 'Generating your personalized learning roadmap...';
-
-      statusEl.append(spinner, message);
-      actionsContainer.append(statusEl);
-    } else {
-      statusEl.hidden = false;
-      const message = statusEl.querySelector('.roadmap-loading-text');
-      if (message) {
-        message.textContent = 'Generating your personalized learning roadmap...';
-      }
+    try {
+      isSubmitting = true;
+      form.setAttribute('aria-busy', 'true');
+      setButtonLoading(submitBtn);
+    } catch (err) {
+      isSubmitting = false;
+      form.removeAttribute('aria-busy');
+      resetButtonLoading(submitBtn);
+      throw err;
     }
   });
 
   window.addEventListener('pageshow', (event) => {
-    if (event.persisted && isSubmitting) {
+    if (event.persisted || isSubmitting) {
       isSubmitting = false;
       form.removeAttribute('aria-busy');
       const submitBtn = form.querySelector('[data-generate-roadmap-btn], button[type="submit"]');
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        if (submitBtn.dataset.originalText) {
-          submitBtn.textContent = submitBtn.dataset.originalText;
-        }
-      }
-      const statusEl = form.querySelector('[data-roadmap-status]');
-      if (statusEl) statusEl.hidden = true;
+      resetButtonLoading(submitBtn);
     }
   });
 
